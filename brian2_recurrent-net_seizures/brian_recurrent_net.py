@@ -1,8 +1,8 @@
-# import sys; sys.path.append('/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/utils_pj')
-# import sys; sys.path.append('/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/NeuronalModelling/brian2_recurrent-net_seizures')
+import sys; sys.path.append('/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/utils_pj')
+import sys; sys.path.append('/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/NeuronalModelling/brian2_recurrent-net_seizures')
 
-import sys; sys.path.append('/home/pshah/Documents/code/')
-import sys; sys.path.append('/home/pshah/Documents/code/neuronal-modelling/brian2/')
+# import sys; sys.path.append('/home/pshah/Documents/code/')
+# import sys; sys.path.append('/home/pshah/Documents/code/neuronal-modelling/brian2/')
 
 
 from brian2_utils import *
@@ -21,10 +21,10 @@ print('Welcome. This model is called ...', model_name)
 #  experimenting with different synapse equations
 #
 # # difference of exponentials synapse
-x = np.linspace(0, 40, 500)
-y = (3 * (np.exp(-(x/2)) - np.exp(-(x/3))))
-plt.plot(x, y)
-plt.show()
+# x = np.linspace(0, 40, 500)
+# y = (3 * (np.exp(-(x/2)) - np.exp(-(x/3))))
+# plt.plot(x, y)
+# plt.show()
 
 
 
@@ -33,9 +33,9 @@ plt.show()
 Cm = 0.25 * nfarad
 gL = 16.7 * nsiemens
 
-Ne = 4000  # number of E neurons
-Ni = 1000 # number of I neurons
-Nx = 4000  # number of X (external population) neurons
+Ne = 800  # number of E neurons
+Ni = 200 # number of I neurons
+Nx = 800  # number of X (external population) neurons
 Ntotal  = Ne+Ni
 
 tau = 15 * ms
@@ -59,14 +59,14 @@ dt = 0.1*ms
 
 
 # EXTERNAL STIMULUS (I KNOW THAT THE ORDER OF THIS IS REALLY WEIRD BUT THIS SECTION AND THE MODEL EQS CANNOT BE ADDED TO THE NETWORK BUILD FUNCTION DEFINITION SINCE IT KICKS UP ERRORS IN BRIAN
-stim_external = False
+stim_external = True
 # define external stimulus as a TimedArray of time dependent values
 stim_onset = 1 * second
 stim_off = 1.5 * second
 stim = np.empty([int(runtime / dt), Ntotal])
 stimulus = TimedArray(stim * amp, dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
 if stim_external:
-    neurons_to_stim = arange(200,210)
+    neurons_to_stim = arange(500,550)
     stim[int(stim_onset / dt):int(stim_off / dt), neurons_to_stim] = 5
     stimulus = TimedArray(stim * amp,
                           dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
@@ -96,7 +96,7 @@ def build_network(record_id, inh_conn=0.2):
 
     #
     # BACKGROUND Poisson input
-    P = PoissonGroup(Nx, rates=2.5*Hz, dt=0.1*ms)
+    P = PoissonGroup(Nx, rates=1.0*Hz, dt=0.1*ms)
     CX = Synapses(P, G, on_pre='ge+=w_x')
     CX.connect(p=0.8)  # Excitatory external drive connectivity
 
@@ -126,8 +126,8 @@ def build_network(record_id, inh_conn=0.2):
 
 #%% BUILD AND RUN NETWORK
 # build network
-record_id=[100, 400, 3010, 4349, 4928, 29, 250, 283]
-net, trace, s_mon, trace_ge, trace_gi, s_mon_p = build_network(record_id=record_id, inh_conn=0.5)
+record_id=[100, 400, 230, 349, 494, 29, 25, 145]
+net, trace, s_mon, trace_ge, trace_gi, s_mon_p = build_network(record_id=record_id, inh_conn=0.8)
 
 # run simulation
 net.run(runtime, report='text')
@@ -141,15 +141,35 @@ avg=mean(spike_counts_Hz); print('average spiking rate of population: ', avg, 'H
 #%% save output of neuronal simulation as arrays and pickles
 
 # save in pkl file
-pickle.dump(trace.V, open("/home/pshah/Documents/code/neuronal-modelling/brian2/trace_V.pkl", "wb"))
+pickle.dump(trace.V, open("/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/NeuronalModelling/sim-exports/trace_V.pkl", "wb"))
 
-#%% convert trace array into pandas DataFrame
+# load pkl file
+# trace = pickle.load(open("/home/pshah/Documents/code/neuronal-modelling/brian2/trace_V.pkl", "rb"))
+
+
+#%% PROCESSING OF BRIAN OUTPUTS
+
+# convert trace array into pandas DataFrame
 trace_df = pd.DataFrame(trace.V.T, columns=record_id)
+
+
+# create numpy array of spikes:
+spike_array = np.empty([Ntotal, len(trace.t)])
+for neuron in list(s_mon.all_values()['t'].keys()):
+    print('working on neuron ', neuron+1, ' out of ', Ntotal, end='\r')
+    spike_locs = [int(x) for x in list(s_mon.spike_trains()[neuron])/dt]
+    spike_array[neuron, spike_locs] = 1
+
+# collect 10ms spike bins
+spike_counts_binned = np.empty([Ntotal, int(runtime/dt/10)])
+for set in range(int(runtime/dt/10)):
+    spike_counts_binned[:,set] = np.sum(spike_array[:,set*10:set*10+10], axis=1)
+
 
 
 #%% ANALYSIS OF NETWORK RESULTS - PLOTTING PLOTS
 
-# plotting spikes
+# plotting spikes as raster plots
 def plot_raster(spike_monitor, neurons_to_plot=None, xlimits=None):
     """
     Plot a raster plot using the spike monitor object.
@@ -171,23 +191,17 @@ def plot_raster(spike_monitor, neurons_to_plot=None, xlimits=None):
 # plot_raster(spike_monitor=s_mon, neurons_to_plot=[2000,2200], xlimits=[500,1500])
 plot_raster(spike_monitor=s_mon)
 
-# plot the average firing rate distribution
-# spike_counts = np.zeros([Ntotal])  # spike counts ordered by neuron IDs
-# for neuron in list(s_mon.all_values()['t'].keys()):
-#     print(neuron, end='\r')
-#     spike_counts[neuron] = s_mon.spike_trains()[neuron].__len__()
 
-
-# brian has a built in method for this as well:
-spike_counts = s_mon.count
-spike_counts_Hz = array(spike_counts/runtime)
-avg=mean(spike_counts_Hz); print('average spiking rate of population: ', avg, 'Hz')
-
-
-# plot histogram of `spike_counts`
+# plot histogram of `spike_counts` per cell
 plt.hist(spike_counts_Hz, bins=100, color='gray')
 plt.axvline(x=avg, color='black')
 plt.title
+plt.show()
+
+
+# plot of binned popn firing rate
+plt.figure(figsize=[30,5])
+plt.plot(range(spike_counts_binned.shape[1]), np.sum(spike_counts_binned, axis=0))
 plt.show()
 
 #%% plotting voltage traces
