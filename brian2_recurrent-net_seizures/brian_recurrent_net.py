@@ -1,8 +1,8 @@
-import sys; sys.path.append('/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/utils_pj')
-import sys; sys.path.append('/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/NeuronalModelling/brian2_recurrent-net_seizures')
+# import sys; sys.path.append('/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/utils_pj')
+# import sys; sys.path.append('/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/NeuronalModelling/brian2_recurrent-net_seizures')
 
-# import sys; sys.path.append('/home/pshah/Documents/code/')
-# import sys; sys.path.append('/home/pshah/Documents/code/neuronal-modelling/brian2/')
+import sys; sys.path.append('/home/pshah/Documents/code/')
+import sys; sys.path.append('/home/pshah/Documents/code/neuronal-modelling/brian2/')
 
 
 from brian2_utils import *
@@ -33,8 +33,8 @@ print('Welcome. This model is called ...', model_name)
 Cm = 0.25 * nfarad
 gL = 16.7 * nsiemens
 
-Ne = 800  # number of E neurons
-Ni = 200 # number of I neurons
+Ne = 800*5  # number of E neurons
+Ni = 200*5 # number of I neurons
 Nx = 800  # number of X (external population) neurons
 Ntotal  = Ne+Ni
 
@@ -66,7 +66,7 @@ stim_off = 1.5 * second
 stim = np.empty([int(runtime / dt), Ntotal])
 stimulus = TimedArray(stim * amp, dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
 if stim_external:
-    neurons_to_stim = arange(500,550)
+    neurons_to_stim = arange(1500,1550)
     stim[int(stim_onset / dt):int(stim_off / dt), neurons_to_stim] = 5
     stimulus = TimedArray(stim * amp,
                           dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
@@ -126,8 +126,8 @@ def build_network(record_id, inh_conn=0.2):
 
 #%% BUILD AND RUN NETWORK
 # build network
-record_id=[100, 400, 230, 349, 494, 29, 25, 145]
-net, trace, s_mon, trace_ge, trace_gi, s_mon_p = build_network(record_id=record_id, inh_conn=0.8)
+record_id=[100, 4000, 2300, 3049, 494, 209, 250, 1505]
+net, trace, s_mon, trace_ge, trace_gi, s_mon_p = build_network(record_id=record_id, inh_conn=0.2)
 
 # run simulation
 net.run(runtime, report='text')
@@ -160,12 +160,21 @@ for neuron in list(s_mon.all_values()['t'].keys()):
     spike_locs = [int(x) for x in list(s_mon.spike_trains()[neuron])/dt]
     spike_array[neuron, spike_locs] = 1
 
-# collect 10ms spike bins
+# collect 10ms spike bins  (with spike counts per bin as well)
 spike_counts_binned = np.empty([Ntotal, int(runtime/dt/10)])
+spike_raster_binned = np.empty([Ntotal, int(runtime/dt/10)])
 for set in range(int(runtime/dt/10)):
-    spike_counts_binned[:,set] = np.sum(spike_array[:,set*10:set*10+10], axis=1)
+    spike_counts_binned[:,set] = np.sum(spike_array[:,set*10:set*10+10], axis=1)  # count the number of spikes per neuron in the 10ms bin
+    spike_raster_binned[np.where(spike_counts_binned[:,set] > 0), set] = 1  # set a positive number of spikes per neuron to 1
 
+# calculate correlation coefficients
+corr_mtx = np.corrcoef(spike_raster_binned[Ni:,:])
+corr_values = corr_mtx[np.triu_indices(corr_mtx.shape[0], k=1)]
+# not sure why but there are nan values coming up in the corr_values calculation
+# remove nans from corr_values
 
+corr_values = [value[~np.isnan(value)] for value in corr_values]
+print(np.mean(corr_values))
 
 #%% ANALYSIS OF NETWORK RESULTS - PLOTTING PLOTS
 
@@ -201,8 +210,10 @@ plt.show()
 
 # plot of binned popn firing rate
 plt.figure(figsize=[30,5])
-plt.plot(range(spike_counts_binned.shape[1]), np.sum(spike_counts_binned, axis=0))
+plt.plot(range(spike_counts_binned.shape[1]), np.sum(spike_counts_binned, axis=0), linewidth=0.5)
+plt.ylabel('total population spikes per 10ms bin')
 plt.show()
+
 
 #%% plotting voltage traces
 colors = []
@@ -241,39 +252,20 @@ plot_inputs(e_monitor=trace_ge, i_monitor=trace_gi, neurons_to_plot=3010, alpha=
 
 
 #%% plot histogram of cell-to-cell correlation values TODO add time shuffling control to the quantification
-# first convert the spiking monitor into a numpy array
-spike_raster = np.zeros([Ntotal, int(runtime/(10*ms))+1])
-spike_train = np.zeros(int(runtime/(10*ms))+1)
-for neuron in list(s_mon.spike_trains()):
-    print(neuron, end='\r')
-    spikes = array(np.round(s_mon.spike_trains()[neuron], 2))*100
-    spike_train[np.int_(spikes)] = 1
-    spike_raster[neuron, :] = spike_train
 
 # calculate and plot histogram of correlation coefficients
-corr_mtx = np.corrcoef(spike_raster)
-corr_values = corr_mtx[np.triu_indices(corr_mtx.shape[0], k=1)]
-plt.hist(corr_values, bins=5000, density=True, color='grey', edgecolor='green')
+plt.figure(figsize=[5,5])
+plt.hist(corr_values, bins=1000, density=True, color='grey', edgecolor='green')
 plt.axvline(np.mean(corr_values), color='black')
+plt.xlim(-0.1,0.1)
 plt.show()
 
 import seaborn as sns
-sns.distplot(corr_values, kde=True, bins=5000, hist=True, hist_kws={'edgecolor': 'grey'}, color='black')
-plt.axvline(np.mean(corr_values))
+sns.distplot(corr_values, kde=True, bins=1000, hist=True, hist_kws={'edgecolor': 'grey'}, color='black')
+plt.axvline(np.mean(corr_values), color='green')
+plt.xlim(-0.2,0.2)
 plt.show()
 
-# depracated below
-for i in exp_obj.spks_smooth:
-    b = np.corrcoef(i)
-    a = np.triu(b)
-    np.fill_diagonal(a,0)
-    c = list(a.flat)
-    d = [i for i in c if i != 0]
-
-    # plot histogram of correlation coefficient densities
-    n, bins, patches = plt.hist(d, 400, density=True)
-    plt.axvline(np.mean(d))
-plt.show()
 
 
 #%% delete monitors before re running network
