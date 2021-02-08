@@ -1,15 +1,24 @@
-# import sys; sys.path.append('/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/utils_pj')
-# import sys; sys.path.append('/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/NeuronalModelling/brian2_recurrent-net_seizures')
+# define whether working on the server or local computer
+server = False
 
-import sys; sys.path.append('/home/pshah/Documents/code/')
-import sys; sys.path.append('/home/pshah/Documents/code/neuronal-modelling/brian2/')
+if server:
+    location = '/home/pshah/Documents/code/'
 
+    import sys; sys.path.append(location)
+    import sys; sys.path.append('%sNeuronalModelling/brian2_recurrent-net_seizures/' % location)
 
-from brian2_utils import *
+else:
+    location = '/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/'
+
+    import sys; sys.path.append('%sutils_pj' % location)
+    import sys; sys.path.append('%sNeuronalModelling/brian2_recurrent-net_seizures' % location)
+
+# import statements
 from brian2 import *
 import funcs_pj as pj
 import matplotlib.pyplot as plt
 import numpy as np
+from brian2_utils import *
 
 import pickle
 import pandas as pd
@@ -141,7 +150,7 @@ avg=mean(spike_counts_Hz); print('average spiking rate of population: ', avg, 'H
 #%% save output of neuronal simulation as arrays and pickles
 
 # save in pkl file
-pickle.dump(trace.V, open("/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/NeuronalModelling/sim-exports/trace_V.pkl", "wb"))
+pickle.dump(trace.V, open("%sNeuronalModelling/sim-exports/trace_V.pkl" % location, "wb"))
 
 # load pkl file
 # trace = pickle.load(open("/home/pshah/Documents/code/neuronal-modelling/brian2/trace_V.pkl", "rb"))
@@ -156,7 +165,7 @@ trace_df = pd.DataFrame(trace.V.T, columns=record_id)
 # create numpy array of spikes:
 spike_array = np.empty([Ntotal, len(trace.t)])
 for neuron in list(s_mon.all_values()['t'].keys()):
-    print('working on neuron ', neuron+1, ' out of ', Ntotal, end='\r')
+    print('processing neuron ', neuron+1, ' out of ', Ntotal, end='\r')
     spike_locs = [int(x) for x in list(s_mon.spike_trains()[neuron])/dt]
     spike_array[neuron, spike_locs] = 1
 
@@ -167,7 +176,7 @@ for set in range(int(runtime/dt/10)):
     spike_counts_binned[:,set] = np.sum(spike_array[:,set*10:set*10+10], axis=1)  # count the number of spikes per neuron in the 10ms bin
     spike_raster_binned[np.where(spike_counts_binned[:,set] > 0), set] = 1  # set a positive number of spikes per neuron to 1
 
-# calculate correlation coefficients
+#%% calculate correlation coefficients
 corr_mtx = np.corrcoef(spike_raster_binned[Ni:,:])
 corr_values = corr_mtx[np.triu_indices(corr_mtx.shape[0], k=1)]
 # not sure why but there are nan values coming up in the corr_values calculation
@@ -209,8 +218,9 @@ plt.show()
 
 
 # plot of binned popn firing rate
+popn_fr = np.sum([element for x, element in enumerate(spike_counts_binned) if x not in neurons_to_stim], axis=0)  # popn fr with stimulated neurons excluded
 plt.figure(figsize=[30,5])
-plt.plot(range(spike_counts_binned.shape[1]), np.sum(spike_counts_binned, axis=0), linewidth=0.5)
+plt.plot(range(spike_counts_binned.shape[1]), popn_fr, linewidth=0.5)
 plt.ylabel('total population spikes per 10ms bin')
 plt.show()
 
@@ -231,7 +241,7 @@ def plot_voltage(voltage_monitor, neurons_to_plot, alpha, xlimits=[]):
     plt.xlabel('t (ms)')
     plt.ylabel('v (mV)')
     plt.show()
-plot_voltage(voltage_monitor=trace, neurons_to_plot=[250, 283], alpha=0.7, xlimits=[500, 3500])
+plot_voltage(voltage_monitor=trace, neurons_to_plot=[100, 4000], alpha=0.7, xlimits=[500, 3500])
 
 
 #%% plotting E and I inputs
@@ -244,7 +254,7 @@ def plot_inputs(e_monitor, i_monitor, neurons_to_plot, alpha, xlimits=None):
     plt.xlabel('t (ms)')
     plt.ylabel('current (siemens)')
     plt.show()
-plot_inputs(e_monitor=trace_ge, i_monitor=trace_gi, neurons_to_plot=3010, alpha=0.5, xlimits=[500,1500])
+plot_inputs(e_monitor=trace_ge, i_monitor=trace_gi, neurons_to_plot=4000, alpha=0.5, xlimits=[500,1500])
 
 
 #%% plot X=external inputs events TODO

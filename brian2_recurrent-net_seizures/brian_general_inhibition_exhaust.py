@@ -14,6 +14,8 @@ El = -60*mV
 gi_t = -20*mV
 factor=1*mV
 
+# NOTE THE Z VARIABLE SEEMS TO BE INVERSED -- IT'S GOING TO ZERO WITH NO
+# INH. ACTIIVTY AND GOING TOWARDS 1 WITH HIGH INH. ACTIVITY
 
 eqs = '''
 dv/dt  = (ge + z * gi - (v-El))/taum : volt (unless refractory)
@@ -26,6 +28,7 @@ dz/dt = 1/tau_g * (z_inf - z) : 1
 z_inf = 1/(1 + exp(-2*10*gi_diff)) : 1
 gi_diff = (gi_t - gi)/factor : 1
 '''
+
 # the goal is to try model a process whereby the failure of inhibition occurs
 # taking inspiration from Liou et al., this can be achieved by relating the reversal potential for Inh. to the Exc. neuron's chloride gradient according to the Nernst equation for E_Cl (chloride)
 # Liou also presents a generalized model of exhaustible inhibition where a factor z is modelled using first order kinetics and the Heaviside step function
@@ -46,19 +49,19 @@ P.z  = 1
 
 # make synaptic connections and specify the synaptic model
 we = 1.62*mV # excitatory synaptic weight (voltage)  (this is equal to [E_exc = 0mV - V_rest = -60mV] * g_exc = 0.27nS
-wi = -20*mV # inhibitory synaptic weight
+wi = -10*mV # inhibitory synaptic weight
 Ce = Synapses(Pe, P, on_pre='ge+=we')
 Ci = Synapses(Pi, Pe, on_pre='gi+=wi')
-Ce.connect(p=0.02)
-Ci.connect(p = 1.0)
+Ce.connect(p=0.2)
+Ci.connect(p = 0.8)
 
 # add a time varying input that increases in strength of firing for a short period of time
 
 
 # poisson inputs into I neurons
 wx = 50.0*mV  # excitatory input neurons
-X = PoissonGroup(1, rates=60. * Hz)
-X_2 = PoissonGroup(1, rates=60. * Hz)
+X = PoissonGroup(1, rates=20. * Hz)
+X_2 = PoissonGroup(1, rates=20. * Hz)
 CiX = Synapses(X, Pi, on_pre='ge+=wx')
 CeX = Synapses(X_2, Pe, on_pre='ge+=wx')
 CiX.connect(p=1.0)
@@ -66,13 +69,14 @@ CeX.connect(p=1.0)
 
 trace = StateMonitor(P, 'v', record=[0,1,11,15])
 trace_z = StateMonitor(P, 'z', record=[0,1,11, 15])
+trace_gi = StateMonitor(P, 'gi', record=[0,1,11, 15])
 s_mon = SpikeMonitor(P)
+x_mon = SpikeMonitor(X)
 
 
 run(5 * second, report='text')
 
 
-#%%
 plt.figure(figsize=[20,3])
 # plot(trace.t/ms, trace[10].v/mV)
 plot(trace.t/ms, trace[11].v/mV)
@@ -93,4 +97,10 @@ plt.figure(figsize=[20,3])
 plot(trace_z.t/ms, trace_z[11].z)
 xlabel('t (ms)')
 ylabel('z')
+show()
+
+plt.figure(figsize=[20,3])
+plot(trace_gi.t/ms, trace_gi[11].gi)
+xlabel('t (ms)')
+ylabel('gi')
 show()
