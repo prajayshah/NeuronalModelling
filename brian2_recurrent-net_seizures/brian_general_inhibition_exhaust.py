@@ -7,14 +7,14 @@ from brian2 import *
 taum = 20*ms
 taue = 5*ms
 taui = 10*ms
-tau_g = 20*ms  # need to find better justification for the proper timescale of this for the actual simulation
+tau_g = 25*ms  # need to find better justification for the proper timescale of this for the actual simulation
 Vt = -50*mV
 Vr = -60*mV
 El = -60*mV
-gi_t = 20*mV
+gi_t = 5*mV
 factor=1*mV
 
-we = 1.62*mV # excitatory synaptic weight (voltage)  (this is equal to [E_exc = 0mV - V_rest = -60mV] * g_exc = 0.27nS
+we = 5.62*mV # excitatory synaptic weight (voltage)  (this is equal to [E_exc = 0mV - V_rest = -60mV] * g_exc = 0.27nS
 wi = -10*mV # inhibitory synaptic weight
 wx = 50.0*mV  # excitatory input neurons
 
@@ -67,7 +67,7 @@ def build_network():
 
 
     # poisson inputs into I neurons
-    X = PoissonGroup(1, rates=20. * Hz)
+    X = PoissonGroup(1, rates=100. * Hz)
     X_2 = PoissonGroup(1, rates=20. * Hz)
     CiX = Synapses(X, Pi, on_pre='ge+=wx')
     CeX = Synapses(X_2, Pe, on_pre='ge+=wx')
