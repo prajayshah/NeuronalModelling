@@ -30,7 +30,7 @@ stim = np.empty([int(runtime / dt), 20])  # where 20 = total number of neurons
 stimulus = TimedArray(stim * mvolt, dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
 if stim_external:
     neurons_to_stim = arange(0,5)
-    stim[int(stim_onset / dt):int(stim_off / dt), neurons_to_stim] = 5
+    stim[int(stim_onset / dt):int(stim_off / dt), neurons_to_stim] = 100
     stimulus = TimedArray(stim * mvolt,
                           dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
 
@@ -62,9 +62,10 @@ def build_network(record_id):
     
     P = NeuronGroup(20, eqs, threshold='v>Vt', reset='v = Vr', refractory=1*ms,
                     method='euler')
+    
     Pi = P[:10]
     Pe = P[10:]
-
+    
     # initialization
     P.v = 'Vr + rand() * (Vt - Vr)'
     # P.v = 'Vr'
@@ -74,17 +75,22 @@ def build_network(record_id):
 
     # make synaptic connections and specify the synaptic model
 
-    Ce = Synapses(Pe, P, on_pre='ge+=we')
-    Ci = Synapses(Pi, Pe, on_pre='gi+=wi')
-    Ce.connect(p=0.2)
-    Ci.connect(p = 0.8)
+    Ce = Synapses(P, P, on_pre='ge+=we')
+    Ci = Synapses(P, P, on_pre='gi+=wi')
+    Ce.connect(i=np.arange(10,19), j=np.arange(10,19), p=0.2)
+    Ci.connect(i=np.arange(0,10), j=np.arange(10,19), p=0.8)
+    
+    # Create a matrix to store the weights and fill it with NaN
+    # W = np.full((len(Pi), len(Pe)), np.nan)
+    # Insert the values from the Synapses object
+    # W[Ci.i[:], Ci.j[:]] = Ci.w[:]
 
     # add a time varying input that increases in strength of firing for a short period of time
 
 
     # poisson inputs into I neurons
     X = PoissonGroup(1, rates=10. * Hz)
-    X_2 = PoissonGroup(1, rates=10. * Hz)
+    X_2 = PoissonGroup(1, rates=80. * Hz)
     CiX = Synapses(X, Pi, on_pre='ge+=wx')
     CeX = Synapses(X_2, Pe, on_pre='ge+=wx')
     CiX.connect(p=1.0)
@@ -99,7 +105,7 @@ def build_network(record_id):
 
     net = Network(collect())
 
-    return net, trace, s_mon, trace_z, trace_gi, x_mon, trace_gi_diff
+    return P, Pe, Pi, Ce, Ci, net, trace, s_mon, trace_z, trace_gi, x_mon, trace_gi_diff
 
 
 '''
