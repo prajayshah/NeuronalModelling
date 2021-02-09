@@ -77,8 +77,8 @@ def build_network(record_id):
 
     Ce = Synapses(P, P, on_pre='ge+=we')
     Ci = Synapses(P, P, on_pre='gi+=wi')
-    Ce.connect(i=np.arange(10,19), j=np.arange(10,19), p=0.2)
-    Ci.connect(i=np.arange(0,10), j=np.arange(10,19), p=0.8)
+    Ce.connect('i>=10', p=0.2)
+    Ci.connect('i<10', p=0.8)
     
     # Create a matrix to store the weights and fill it with NaN
     # W = np.full((len(Pi), len(Pe)), np.nan)
