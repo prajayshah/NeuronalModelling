@@ -1,28 +1,29 @@
-# define whether working on the server or local computer - probably dont need all this stuff except for brian2 import
-server = False
+# # define whether working on the server or local computer - probably dont need all this stuff except for brian2 import
+# server = True
 
-if server:
-    location = '/home/pshah/Documents/code/'
+# if server:
+#     location = '/home/pshah/Documents/code/'
 
-    import sys; sys.path.append(location)
-    import sys; sys.path.append('%sNeuronalModelling/brian2_recurrent-net_seizures/' % location)
+#     import sys; sys.path.append(location)
+#     import sys; sys.path.append('%sNeuronalModelling/brian2_recurrent-net_seizures/' % location)
 
-else:
-    location = '/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/'
+# else:
+#     location = '/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/'
 
-    import sys; sys.path.append('%sutils_pj' % location)
-    import sys; sys.path.append('%sNeuronalModelling/brian2_recurrent-net_seizures' % location)
+#     import sys; sys.path.append('%sutils_pj' % location)
+#     import sys; sys.path.append('%sNeuronalModelling/brian2_recurrent-net_seizures' % location)
 
-# import statements
+# # import statements
+# from brian2 import *
+# import funcs_pj as pj
+# import matplotlib.pyplot as plt
+# import numpy as np
+# from brian2_utils import *
+
+# import pickle
+# import pandas as pd
+
 from brian2 import *
-import funcs_pj as pj
-import matplotlib.pyplot as plt
-import numpy as np
-from brian2_utils import *
-
-import pickle
-import pandas as pd
-
 
 #%% INITIALIZING THE MODEL
 model_name = 'rec_sz1'
@@ -67,7 +68,7 @@ w_e = 2.4 * nsiemens  # excitatory synaptic weight
 w_i = 40 * nsiemens  # inhibitory synaptic weight
 w_x = 5.4 * nsiemens  # external input synaptic weight
 
-gi_t = 20 * nsiemens # threshold value after which synaptic inh. strength starts to decrease
+gi_t = 200 * nsiemens # threshold value after which synaptic inh. strength starts to decrease
 factor = 1 * nsiemens # factor needed for the model eqs for the exhaust inh part
 
 runtime = 5*second
@@ -75,7 +76,7 @@ dt = 0.1*ms
 
 
 # EXTERNAL STIMULUS (I KNOW THAT THE ORDER OF THIS IS REALLY WEIRD BUT THIS SECTION AND THE MODEL EQS CANNOT BE ADDED TO THE NETWORK BUILD FUNCTION DEFINITION SINCE IT KICKS UP ERRORS IN BRIAN
-stim_external = True
+stim_external = False
 # define external stimulus as a TimedArray of time dependent values
 stim_onset = 1 * second
 stim_off = 1.5 * second
@@ -95,8 +96,8 @@ dgi/dt = -gi/tau_d : siemens
 
 # z factor used to capture changes in Inh. synaptic effectiveness
 dz/dt = 1/tau_g * (z_inf - z) : 1
-z_inf = 1/(1 + exp(-2*10*gi_diff)) : 1
-gi_diff = (gi_t + gi)/factor : 1  # note that this is addition because gi has negative weight
+z_inf = 1/(1 + exp(-2*10.0*gi_diff)) : 1
+gi_diff = (gi_t - gi)/factor : 1  # note that this is not addition because gi has +ve weight
 ''')
 
 #%% NETWORK BUILD PART 2 - SETTING UP BRIAN STRUCTURE
@@ -138,12 +139,17 @@ def build_network(record_id, inh_conn=0.2):
     trace_gi = StateMonitor(G, 'gi', record=record_id)
     s_mon = SpikeMonitor(G)
     s_mon_p = SpikeMonitor(P)
+    
+    # these are for tracking the Inh. exhaust stuff
+    trace_z = StateMonitor(G, 'z', record=record_id)
+    trace_gi = StateMonitor(G, 'gi', record=record_id)
+    trace_gi_diff = StateMonitor(G, 'gi_diff', record=record_id)
 
     net = Network(collect())
 
-    return net, trace, s_mon, trace_ge, trace_gi, s_mon_p, Ce, Ci, Ge, Gi
+    return net, trace, s_mon, trace_ge, trace_gi, s_mon_p, Ce, Ci, Ge, Gi, G, trace_z, trace_gi, trace_gi_diff
 
-# TRANSFERRED BELOW TO USE FROM run_brian_recurrent_net.py
+# TRANSFERRED BELOW TO NOW RUN OUT OF run_brian_recurrent_net.py
 # #%% BUILD AND RUN NETWORK
 # # build network
 # record_id=[100, 4000, 2300, 3049, 494, 209, 250, 1505]
