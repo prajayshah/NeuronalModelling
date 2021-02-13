@@ -68,7 +68,7 @@ w_e = 2.4 * nsiemens  # excitatory synaptic weight
 w_i = 40 * nsiemens  # inhibitory synaptic weight
 w_x = 5.4 * nsiemens  # external input synaptic weight
 
-gi_t = 2000 * nsiemens # threshold value after which synaptic inh. strength starts to decrease
+gi_t = 200 * nsiemens # threshold value after which synaptic inh. strength starts to decrease
 factor = 1 * nsiemens # factor needed for the model eqs for the exhaust inh part
 
 runtime = 5*second
@@ -120,7 +120,7 @@ def build_network(record_id, inh_conn=0.2):
     # BACKGROUND Poisson input
     P = PoissonGroup(Nx, rates=1.0*Hz, dt=0.1*ms)
     CX = Synapses(P, G, on_pre='ge+=w_x')
-    CX.connect(p=0.8)  # Excitatory external drive connectivity
+    CX.connect(p=0.2)  # Excitatory external drive connectivity
 
     # CeX = Synapses(P, Ge, on_pre='ge+=w_x')
     # CiX = Synapses(P, Gi, on_pre='ge+=w_x')
