@@ -50,7 +50,7 @@ Nx = 800  # number of X (external population) neurons
 Ntotal  = Ne+Ni
 
 tau = 15 * ms
-Vl = -70 * mV  # resting potential
+Vl = -75 * mV  # resting potential
 V_t = -50 * mV  # threshold
 V_refrac = -60 * mV  # refractory voltage
 
@@ -68,7 +68,7 @@ w_e = 2.4 * nsiemens  # excitatory synaptic weight
 w_i = 40 * nsiemens  # inhibitory synaptic weight
 w_x = 5.4 * nsiemens  # external input synaptic weight
 
-gi_t = 200 * nsiemens # threshold value after which synaptic inh. strength starts to decrease
+gi_t = 2000 * nsiemens # threshold value after which synaptic inh. strength starts to decrease
 factor = 1 * nsiemens # factor needed for the model eqs for the exhaust inh part
 
 runtime = 5*second
@@ -96,7 +96,7 @@ dgi/dt = -gi/tau_d : siemens
 
 # z factor used to capture changes in Inh. synaptic effectiveness
 dz/dt = 1/tau_g * (z_inf - z) : 1
-z_inf = 1/(1 + exp(-2*10.0*gi_diff)) : 1
+z_inf = 1/(1 + exp(-2*1.0*gi_diff)) : 1
 gi_diff = (gi_t - gi)/factor : 1  # note that this is not addition because gi has +ve weight
 ''')
 
@@ -129,9 +129,10 @@ def build_network(record_id, inh_conn=0.2):
 
 
     # Initialization
-    G.V = 'Vl'
+    G.V = 'Vl + rand() * (V_t - Vl)'
     G.ge = 0
     G.gi = 0
+    G.z = 1.
 
     # Setup a few monitors
     trace = StateMonitor(G, 'V', record=record_id)
@@ -148,6 +149,71 @@ def build_network(record_id, inh_conn=0.2):
     net = Network(collect())
 
     return net, trace, s_mon, trace_ge, trace_gi, s_mon_p, Ce, Ci, Ge, Gi, G, trace_z, trace_gi, trace_gi_diff
+
+
+def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, trace_gi, trace_ge, neuron, xlimits):
+    "bunch of plots for looking at the Inh. exhaust mech"
+    figure(figsize=[20,3])
+    plot(s_mon.t/ms, s_mon.i, ',k')
+    xlabel('t (ms)')
+    ylabel('Neuron index')
+    show()
+    spike_counts = s_mon.count
+    spike_counts_Hz = array(spike_counts/runtime)
+    avg=mean(spike_counts_Hz); print('average spiking rate of population: ', avg, 'Hz')
+    
+    
+    figure(figsize=[20,3])
+    plot(s_mon_p.t/ms, s_mon_p.i, ',k')
+    if xlimits:
+        xlim(xlimits)
+    xlabel('t (ms)')
+    ylabel('Neuron index')
+    show()
+    
+    
+    plt.figure(figsize=[20,3])
+    plot(trace.t/ms, trace[neuron].V/mV)
+    if xlimits:
+        xlim(xlimits)
+        ylim([-80, -40])
+    xlabel('t (ms)')
+    ylabel('mV')
+    show()
+
+
+    plt.figure(figsize=[20,3])
+    plot(trace_z.t/ms, trace_z[neuron].z)
+    if xlimits:
+        xlim(xlimits)
+    xlabel('t (ms)')
+    ylabel('z')
+    show()
+
+    plt.figure(figsize=[20,3])
+    plot(trace_gi_diff.t/ms, trace_gi_diff[neuron].gi_diff)
+    if xlimits:
+        xlim(xlimits)
+    xlabel('t (ms)')
+    ylabel('gi_diff')
+    show()
+
+    plt.figure(figsize=[20,3])
+    plot(trace_gi.t/ms, trace_gi[neuron].gi/nS)
+    if xlimits:
+        xlim(xlimits)
+    xlabel('t (ms)')
+    ylabel('gi')
+    show()
+    
+    plt.figure(figsize=[20,3])
+    plot(trace_ge.t/ms, trace_ge[neuron].ge/nS)
+    if xlimits:
+        xlim(xlimits)
+    xlabel('t (ms)')
+    ylabel('ge')
+    show()
+
 
 # TRANSFERRED BELOW TO NOW RUN OUT OF run_brian_recurrent_net.py
 # #%% BUILD AND RUN NETWORK
