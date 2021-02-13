@@ -18,7 +18,7 @@
 # import funcs_pj as pj
 # import matplotlib.pyplot as plt
 # import numpy as np
-# from brian2_utils import *
+from brian2_utils import *
 
 # import pickle
 # import pandas as pd
@@ -71,19 +71,19 @@ w_x = 5.4 * nsiemens  # external input synaptic weight
 gi_t = 200 * nsiemens # threshold value after which synaptic inh. strength starts to decrease
 factor = 1 * nsiemens # factor needed for the model eqs for the exhaust inh part
 
-runtime = 5*second
+runtime = 3*second
 dt = 0.1*ms
 
 
 # EXTERNAL STIMULUS (I KNOW THAT THE ORDER OF THIS IS REALLY WEIRD BUT THIS SECTION AND THE MODEL EQS CANNOT BE ADDED TO THE NETWORK BUILD FUNCTION DEFINITION SINCE IT KICKS UP ERRORS IN BRIAN
-stim_external = False
+stim_external = True
 # define external stimulus as a TimedArray of time dependent values
-stim_onset = 1 * second
-stim_off = 1.5 * second
+stim_onset = 1.000 * second
+stim_off =   1.100 * second
 stim = np.empty([int(runtime / dt), Ntotal])
 stimulus = TimedArray(stim * amp, dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
 if stim_external:
-    neurons_to_stim = arange(1500,1550)
+    neurons_to_stim = arange(4000,4050)
     stim[int(stim_onset / dt):int(stim_off / dt), neurons_to_stim] = 5
     stimulus = TimedArray(stim * amp,
                           dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
@@ -101,7 +101,7 @@ gi_diff = (gi_t - gi)/factor : 1  # note that this is not addition because gi ha
 ''')
 
 #%% NETWORK BUILD PART 2 - SETTING UP BRIAN STRUCTURE
-def build_network(record_id, inh_conn=0.2):
+def build_network(record_id, inh_conn=0.2, input_rate=2.5):
 
     start_scope()
 
@@ -118,7 +118,7 @@ def build_network(record_id, inh_conn=0.2):
 
     #
     # BACKGROUND Poisson input
-    P = PoissonGroup(Nx, rates=1.0*Hz, dt=0.1*ms)
+    P = PoissonGroup(Nx, rates=input_rate*Hz, dt=0.1*ms)
     CX = Synapses(P, G, on_pre='ge+=w_x')
     CX.connect(p=0.2)  # Excitatory external drive connectivity
 
@@ -164,28 +164,38 @@ def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, t
     
     
     figure(figsize=[20,3])
+    plot(s_mon.t/ms, s_mon.i, ',k')
+    if xlimits:
+        xlim(xlimits)
+    xlabel('t (ms)')
+    ylabel('Neuron index - main group')
+    show()
+    
+    figure(figsize=[20,3])
     plot(s_mon_p.t/ms, s_mon_p.i, ',k')
     if xlimits:
         xlim(xlimits)
     xlabel('t (ms)')
-    ylabel('Neuron index')
+    ylabel('Neuron index - input group')
     show()
     
     
-    plt.figure(figsize=[20,3])
-    plot(trace.t/ms, trace[neuron].V/mV)
-    if xlimits:
-        xlim(xlimits)
-        ylim([-80, -40])
-    xlabel('t (ms)')
-    ylabel('mV')
-    show()
+    plot_voltage(voltage_monitor=trace, spike_monitor=s_mon, neuron_id=[neuron], alpha=0.7, ylimits=[-95, 20], xlimits=xlimits)
+#     plt.figure(figsize=[20,3])
+#     plot(trace.t/ms, trace[neuron].V/mV)
+#     if xlimits:
+#         xlim(xlimits)
+#         ylim([-80, -40])
+#     xlabel('t (ms)')
+#     ylabel('mV')
+#     show()
 
 
     plt.figure(figsize=[20,3])
     plot(trace_z.t/ms, trace_z[neuron].z)
     if xlimits:
         xlim(xlimits)
+#         ylim([0.0, 1.0])
     xlabel('t (ms)')
     ylabel('z')
     show()
@@ -194,6 +204,7 @@ def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, t
     plot(trace_gi_diff.t/ms, trace_gi_diff[neuron].gi_diff)
     if xlimits:
         xlim(xlimits)
+        ylim([-3000, 700])
     xlabel('t (ms)')
     ylabel('gi_diff')
     show()
@@ -202,6 +213,7 @@ def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, t
     plot(trace_gi.t/ms, trace_gi[neuron].gi/nS)
     if xlimits:
         xlim(xlimits)
+        ylim([0, 3000])
     xlabel('t (ms)')
     ylabel('gi')
     show()

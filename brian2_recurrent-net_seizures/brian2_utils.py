@@ -4,7 +4,7 @@ import funcs_pj as pj
 from brian2 import *
 
 
-def plot_voltage(voltage_monitor, spike_monitor, alpha, xlimits, neuron_id=[]):
+def plot_voltage(voltage_monitor, spike_monitor, alpha, ylimits, xlimits, neuron_id=[]):
     # make random color choices
     colors = []
     for i in range(len(neuron_id)):
@@ -18,7 +18,10 @@ def plot_voltage(voltage_monitor, spike_monitor, alpha, xlimits, neuron_id=[]):
         # add vertical lines at the spike times for individual neurons (using the values from the spike monitor)
         plt.vlines(x=np.int_(array(np.round(spike_monitor.spike_trains()[neuron], 3)) * 1000), ymin=-50, ymax=0,
                    alpha=alpha, color=colors[neuron_id.index(neuron)])
-    plt.xlim(xlimits)
+    if xlimits:
+        plt.xlim(xlimits)
+    if ylimits:
+        plt.ylim(ylimits)
     plt.xlabel('t (ms)')
     plt.ylabel('v (mV)')
     plt.show()
