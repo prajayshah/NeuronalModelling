@@ -152,9 +152,6 @@ def plot_inputs(e_monitor, i_monitor, neurons_to_plot, alpha, xlimits=None):
 plot_inputs(e_monitor=trace_ge, i_monitor=trace_gi, neurons_to_plot=4000, alpha=0.5, xlimits=[500,1500])
 
 
-#%% plot X=external inputs events TODO
-
-
 
 #%% plot histogram of cell-to-cell correlation values TODO add time shuffling control to the quantification
 

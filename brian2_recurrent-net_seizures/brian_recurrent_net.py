@@ -153,8 +153,11 @@ def build_network(record_id, inh_conn=0.2, input_rate=2.5):
 
 def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, trace_gi, trace_ge, neuron, xlimits):
     "bunch of plots for looking at the Inh. exhaust mech"
+    
+    plt.style.use('dark_background')
+    
     figure(figsize=[20,3])
-    plot(s_mon.t/ms, s_mon.i, ',k')
+    plot(s_mon.t/ms, s_mon.i, ',k', color='white')
     xlabel('t (ms)')
     ylabel('Neuron index')
     show()
@@ -164,7 +167,7 @@ def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, t
     
     
     figure(figsize=[20,3])
-    plot(s_mon.t/ms, s_mon.i, ',k')
+    plot(s_mon.t/ms, s_mon.i, ',k', color = 'white')
     if xlimits:
         xlim(xlimits)
     xlabel('t (ms)')
@@ -172,7 +175,7 @@ def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, t
     show()
     
     figure(figsize=[20,3])
-    plot(s_mon_p.t/ms, s_mon_p.i, ',k')
+    plot(s_mon_p.t/ms, s_mon_p.i, ',k', color = 'white')
     if xlimits:
         xlim(xlimits)
     xlabel('t (ms)')
@@ -204,7 +207,7 @@ def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, t
     plot(trace_gi_diff.t/ms, trace_gi_diff[neuron].gi_diff)
     if xlimits:
         xlim(xlimits)
-        ylim([-3000, 700])
+        ylim([-700, 700])
     xlabel('t (ms)')
     ylabel('gi_diff')
     show()

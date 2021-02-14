@@ -26,7 +26,7 @@ def plot_voltage(voltage_monitor, spike_monitor, alpha, ylimits, xlimits, neuron
     plt.ylabel('v (mV)')
     plt.show()
 
-def plot_raster(spike_monitor, neurons_to_plot=None, xlimits=None):
+def plot_raster(spike_monitor, neurons_to_plot=None, xlimits=None, color='black'):
     """
     Plot a raster plot using the spike monitor object.
 
@@ -35,7 +35,7 @@ def plot_raster(spike_monitor, neurons_to_plot=None, xlimits=None):
     :param xlimits: limit of x axis (time, in milliseconds)
     """
     figure(figsize=[20,3])
-    plot(spike_monitor.t/ms, spike_monitor.i, ',k')
+    plot(spike_monitor.t/ms, spike_monitor.i, ',k', color=color)
     xlabel('Time (ms)')
     ylabel('Neuron index')
     if xlimits:
