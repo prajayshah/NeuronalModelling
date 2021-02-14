@@ -57,7 +57,7 @@ V_refrac = -60 * mV  # refractory voltage
 # Time constants
 tau = 5 * ms
 tau_d = 5 * ms
-tau_g = 25*ms  # used for timescale of the inh. exhaust mechanism need to find better justification for the proper timescale of this for the actual simulation
+tau_g = 100*ms  # used for timescale of the inh. exhaust mechanism need to find better justification for the proper timescale of this for the actual simulation
 
 
 # Reversal potentials
@@ -75,18 +75,18 @@ runtime = 3*second
 dt = 0.1*ms
 
 
-# EXTERNAL STIMULUS (I KNOW THAT THE ORDER OF THIS IS REALLY WEIRD BUT THIS SECTION AND THE MODEL EQS CANNOT BE ADDED TO THE NETWORK BUILD FUNCTION DEFINITION SINCE IT KICKS UP ERRORS IN BRIAN
-stim_external = True
-# define external stimulus as a TimedArray of time dependent values
-stim_onset = 1.000 * second
-stim_off =   1.100 * second
-stim = np.empty([int(runtime / dt), Ntotal])
-stimulus = TimedArray(stim * amp, dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
-if stim_external:
-    neurons_to_stim = arange(4000,4050)
-    stim[int(stim_onset / dt):int(stim_off / dt), neurons_to_stim] = 5
-    stimulus = TimedArray(stim * amp,
-                          dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
+# # EXTERNAL STIMULUS (I KNOW THAT THE ORDER OF THIS IS REALLY WEIRD BUT THIS SECTION AND THE MODEL EQS CANNOT BE ADDED TO THE NETWORK BUILD FUNCTION DEFINITION SINCE IT KICKS UP ERRORS IN BRIAN
+# stim_external = True
+# # define external stimulus as a TimedArray of time dependent values
+# stim_onset = 1.000 * second
+# stim_off =   1.150 * second
+# stim = np.empty([int(runtime / dt), Ntotal])
+# stimulus = TimedArray(stim * amp, dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
+# if stim_external:
+#     neurons_to_stim = arange(200,300)
+#     stim[int(stim_onset / dt):int(stim_off / dt), neurons_to_stim] = 5
+#     stimulus = TimedArray(stim * amp,
+#                           dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
 
 # The model
 eqs = Equations('''
@@ -213,7 +213,7 @@ def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, t
     plot(trace_gi.t/ms, trace_gi[neuron].gi/nS)
     if xlimits:
         xlim(xlimits)
-        ylim([0, 3000])
+        ylim([0, 500])
     xlabel('t (ms)')
     ylabel('gi')
     show()
