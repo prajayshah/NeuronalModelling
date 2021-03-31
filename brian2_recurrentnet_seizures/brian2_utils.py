@@ -1,6 +1,6 @@
-import sys; sys.path.append('/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/utils_pj')
+import sys; sys.path.append('/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/utils_praj')
 
-import funcs_pj as pj
+from funcs_pj import generate_new_color
 from brian2 import *
 
 
@@ -8,7 +8,7 @@ def plot_voltage(voltage_monitor, spike_monitor, alpha, ylimits, xlimits, neuron
     # make random color choices
     colors = []
     for i in range(len(neuron_id)):
-        colors.append(pj.generate_new_color(colors, pastel_factor=0.2))
+        colors.append(generate_new_color(colors, pastel_factor=0.2))
 
     # make plot
     plt.figure(figsize=[20, 3])

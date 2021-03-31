@@ -12,7 +12,7 @@ Ntotal = 4000
 
 # define stimulus as a TimedArray of time dependent values
 stim = np.empty([int(runtime/dt),Ntotal])
-stim[int(stim_onset/dt):int(stim_off/dt), 3200:4000] = 5  # constant current input into the specified  cells at the specified onset and offset times
+stim[int(stim_onset/dt):int(stim_off/dt), 1000:2000] = 11  # constant current input into the specified  cells at the specified onset and offset times
 stimulus = TimedArray(stim*mV, dt=0.1*ms)
 
 
@@ -22,7 +22,7 @@ taue = 5*ms
 taui = 10*ms
 Vt = -50*mV
 Vr = -60*mV
-El = -49*mV
+El = -60*mV
 
 eqs = '''
 dv/dt  = (stimulus(t,i) + ge+gi-(v-El))/taum : volt (unless refractory)
@@ -45,8 +45,8 @@ we = (60*0.27/10)*mV # excitatory synaptic weight (voltage)  (this is equal to [
 wi = (-20*4.5/10)*mV # inhibitory synaptic weight
 Ce = Synapses(P, P, on_pre='ge += we')
 Ci = Synapses(P, P, on_pre='gi += wi')
-Ce.connect('i<3200', p=0.2)
-Ci.connect('i>=3200', p=1.0)
+Ce.connect('i<3200', p=0.8)
+Ci.connect('i>=3200', p=0.5)
 trace = StateMonitor(P, 'v', record=[1, 10, 400, 600, 1150, 1100, 3300, 3500])
 trace_gi = StateMonitor(P, 'gi', record=[1, 10, 400, 600, 1150, 1100, 3300, 3500])
 # trace_app = StateMonitor(P, 'gapp', record=[1, 10, 400, 600])
@@ -66,13 +66,9 @@ net = Network(P, trace, s_mon)
 net.run(5 * second, report='text')
 
 
-
 #%%
 figure(figsize=[20,3])
-# plot(trace.t/ms, trace[10].v/mV)
-plot(trace_gi.t/ms, trace_gi[1150].gi/mV)
-# plot(trace_app.t, trace_app[400].Iapp)
-# plt.plot(trace.t/ms, trace[100].v/mV)
+plot(trace.t/ms, trace[600].v/mV)
 xlabel('t (ms)')
 ylabel('mV')
 show()

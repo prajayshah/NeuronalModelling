@@ -38,7 +38,6 @@ T = np.linspace(tmin, tmax, 10000)
 
 
 # Potassium ion-channel rate functions
-
 def alpha_n(Vm):
     return (0.01 * (10.0 - Vm)) / (np.exp(1.0 - (0.1 * Vm)) - 1.0)
 
@@ -48,7 +47,6 @@ def beta_n(Vm):
 
 
 # Sodium ion-channel rate functions
-
 def alpha_m(Vm):
     return (0.1 * (25.0 - Vm)) / (np.exp(2.5 - (0.1 * Vm)) - 1.0)
 
@@ -66,7 +64,6 @@ def beta_h(Vm):
 
 
 # n, m, and h steady-state values
-
 def n_inf(Vm=0.0):
     return alpha_n(Vm) / (alpha_n(Vm) + beta_n(Vm))
 
@@ -129,7 +126,7 @@ Vy = odeint(compute_derivatives, Y, T)
 # Input stimulus
 Idv = [Id(t) for t in T]
 
-fig, ax = plt.subplots(figsize=(12, 7))
+fig, ax = plt.subplots(figsize=(5, 3))
 ax.plot(T, Idv)
 ax.set_xlabel('Time (ms)')
 ax.set_ylabel(r'Current density (uA/$cm^2$)')
@@ -138,7 +135,7 @@ plt.grid()
 plt.show()
 
 # Neuron potential
-fig, ax = plt.subplots(figsize=(12, 7))
+fig, ax = plt.subplots(figsize=(5, 3))
 ax.plot(T, Vy[:, 0])
 ax.set_xlabel('Time (ms)')
 ax.set_ylabel('Vm (mV)')

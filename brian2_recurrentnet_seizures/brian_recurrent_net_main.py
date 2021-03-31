@@ -5,23 +5,23 @@
 #     location = '/home/pshah/Documents/code/'
 
 #     import sys; sys.path.append(location)
-#     import sys; sys.path.append('%sNeuronalModelling/brian2_recurrent-net_seizures/' % location)
+#     import sys; sys.path.append('%sNeuronalModelling/brian2_recurrentnet_seizures/' % location)
 
 # else:
 #     location = '/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/'
 
 #     import sys; sys.path.append('%sutils_pj' % location)
-#     import sys; sys.path.append('%sNeuronalModelling/brian2_recurrent-net_seizures' % location)
+#     import sys; sys.path.append('%sNeuronalModelling/brian2_recurrentnet_seizures' % location)
 
 # # import statements
-# from brian2 import *
+from brian2 import *
 # import funcs_pj as pj
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 # import numpy as np
-from brian2_utils import *
+from brian2_recurrentnet_seizures import brian2_utils as b2utils
 
-# import pickle
-# import pandas as pd
+import pickle
+import pandas as pd
 
 from brian2 import *
 
@@ -76,17 +76,17 @@ dt = 0.1*ms
 
 
 # # EXTERNAL STIMULUS (I KNOW THAT THE ORDER OF THIS IS REALLY WEIRD BUT THIS SECTION AND THE MODEL EQS CANNOT BE ADDED TO THE NETWORK BUILD FUNCTION DEFINITION SINCE IT KICKS UP ERRORS IN BRIAN
-# stim_external = True
-# # define external stimulus as a TimedArray of time dependent values
-# stim_onset = 1.000 * second
-# stim_off =   1.150 * second
-# stim = np.empty([int(runtime / dt), Ntotal])
+stim_external = True
+# define external stimulus as a TimedArray of time dependent values
+stim_onset = 1.000 * second
+stim_off =   1.150 * second
+stim = np.empty([int(runtime / dt), Ntotal])
 # stimulus = TimedArray(stim * amp, dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
-# if stim_external:
-#     neurons_to_stim = arange(200,300)
-#     stim[int(stim_onset / dt):int(stim_off / dt), neurons_to_stim] = 5
-#     stimulus = TimedArray(stim * amp,
-#                           dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
+if stim_external:
+    neurons_to_stim = arange(200,300)
+    stim[int(stim_onset / dt):int(stim_off / dt), neurons_to_stim] = 5
+    stimulus = TimedArray(stim * amp,
+                          dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
 
 # The model
 eqs = Equations('''
@@ -148,7 +148,7 @@ def build_network(record_id, inh_conn=0.2, input_rate=2.5):
 
     net = Network(collect())
 
-    return net, trace, s_mon, trace_ge, trace_gi, s_mon_p, Ce, Ci, Ge, Gi, G, trace_z, trace_gi, trace_gi_diff
+    return net, trace, s_mon, trace_ge, s_mon_p, Ce, Ci, Ge, Gi, G, trace_z, trace_gi, trace_gi_diff
 
 
 def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, trace_gi, trace_ge, neuron, xlimits):
@@ -183,7 +183,7 @@ def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, t
     show()
     
     
-    plot_voltage(voltage_monitor=trace, spike_monitor=s_mon, neuron_id=[neuron], alpha=0.7, ylimits=[-95, 20], xlimits=xlimits)
+    b2utils.plot_voltage(voltage_monitor=trace, spike_monitor=s_mon, neuron_id=[neuron], alpha=0.7, ylimits=[-95, 20], xlimits=xlimits)
 #     plt.figure(figsize=[20,3])
 #     plot(trace.t/ms, trace[neuron].V/mV)
 #     if xlimits:
@@ -231,22 +231,24 @@ def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, t
 
 
 # TRANSFERRED BELOW TO NOW RUN OUT OF run_brian_recurrent_net.py
-# #%% BUILD AND RUN NETWORK
-# # build network
-# record_id=[100, 4000, 2300, 3049, 494, 209, 250, 1505]
-# net, trace, s_mon, trace_ge, trace_gi, s_mon_p, Ce, Ci, Ge, Gi = build_network(record_id=record_id, inh_conn=0.2)
-#
-# # run simulation
-# net.run(runtime, report='text')
-#
-# # quick spike raster plot to initialize plotting
-# figure(figsize=[20,3])
-# plot(s_mon.t/ms, s_mon.i, ',k'); show()
-# spike_counts = s_mon.count
-# spike_counts_Hz = array(spike_counts/runtime)
-# avg=mean(spike_counts_Hz); print('average spiking rate of population: ', avg, 'Hz')
-#
-# #%% save output of neuronal simulation as arrays and pickles
+#%% BUILD AND RUN NETWORK
+# build network
+record_id=[100, 4000, 2300, 3049, 494, 209, 250, 1505]
+net, trace, s_mon, trace_ge, s_mon_p, Ce, Ci, Ge, Gi, G, trace_z, trace_gi, trace_gi_diff = build_network(record_id=record_id, inh_conn=0.2)
+
+# run simulation
+net.run(runtime, report='text')
+
+# %%  quick spike raster plot to initialize plotting
+figure(figsize=[20,3])
+plot(s_mon.t/ms, s_mon.i, ',k'); show()
+spike_counts = s_mon.count
+spike_counts_Hz = array(spike_counts/runtime)
+avg=mean(spike_counts_Hz); print('average spiking rate of population: ', avg, 'Hz')
+
+
+
+# %% save output of neuronal simulation as arrays and pickles
 #
 # # save in pkl file
 # pickle.dump(trace.V, open("%sNeuronalModelling/sim-exports/trace_V.pkl" % location, "wb"))

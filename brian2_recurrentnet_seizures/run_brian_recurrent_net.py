@@ -1,24 +1,21 @@
-server = False
+server = True
 
 if server:
     location = '/home/pshah/Documents/code/'
-
-    import sys; sys.path.append(location)
-    import sys; sys.path.append('%sNeuronalModelling/brian2_recurrent-net_seizures/' % location)
+    import sys; sys.path.append('%sutils_praj' % location)
+    sys.path.append('%sNeuronalModelling/' % location)
 
 else:
     location = '/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/'
-
-    import sys; sys.path.append('%sutils_pj' % location)
-    import sys; sys.path.append('%sNeuronalModelling/brian2_recurrent-net_seizures' % location)
+    import sys; sys.path.append('%sutils_praj' % location)
 
 # import statements
 from brian2 import *
-import funcs_pj as pj
+from funcs_pj import generate_new_color
 import matplotlib.pyplot as plt
 import numpy as np
-from brian2_utils import *
-from brian_recurrent_net import *
+from brian2_recurrentnet_seizures.brian2_utils import *
+from brian2_recurrentnet_seizures.brian_recurrent_net_main import *
 
 import pickle
 import pandas as pd
@@ -30,17 +27,20 @@ dt = 0.1*ms
 
 # build network
 record_id=[100, 4000, 2300, 3049, 494, 209, 250, 1505]
-net, trace, s_mon, trace_ge, trace_gi, s_mon_p, Ce, Ci, Ge, Gi = build_network(record_id=record_id, inh_conn=0.2)
+net, trace, s_mon, trace_ge, s_mon_p, Ce, Ci, Ge, Gi, G, trace_z, trace_gi, trace_gi_diff = build_network(record_id=record_id, inh_conn=0.2)
 
 # run simulation
 net.run(runtime, report='text')
 
 # quick spike raster plot to initialize plotting
 figure(figsize=[20,3])
-plot(s_mon.t/ms, s_mon.i, ',k'); show()
+plot(s_mon.t/ms, s_mon.i, ',k'); plt.show()
 spike_counts = s_mon.count
 spike_counts_Hz = array(spike_counts/runtime)
 avg=mean(spike_counts_Hz); print('average spiking rate of population: ', avg, 'Hz')
+
+plt.plot(s_mon.t/ms, array(s_mon.i), ',k')
+plt.show()
 
 #%% save output of neuronal simulation as arrays and pickles
 
@@ -123,7 +123,7 @@ plt.show()
 #%% plotting voltage traces
 colors = []
 for i in range(0, len(record_id)):
-    colors.append(pj.generate_new_color(colors, pastel_factor=0.2))
+    colors.append(generate_new_color(colors, pastel_factor=0.2))
 
 def plot_voltage(voltage_monitor, neurons_to_plot, alpha, xlimits=[]):
     plt.figure(figsize=[30,5])
