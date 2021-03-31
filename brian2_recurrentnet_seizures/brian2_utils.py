@@ -4,7 +4,7 @@ from funcs_pj import generate_new_color
 from brian2 import *
 
 
-def plot_voltage(voltage_monitor, spike_monitor, alpha, ylimits, xlimits, neuron_id=[]):
+def plot_voltage(voltage_monitor, spike_monitor, alpha, ylimits, xlimits, neuron_id=[], title=None):
     # make random color choices
     colors = []
     for i in range(len(neuron_id)):
@@ -22,11 +22,13 @@ def plot_voltage(voltage_monitor, spike_monitor, alpha, ylimits, xlimits, neuron
         plt.xlim(xlimits)
     if ylimits:
         plt.ylim(ylimits)
+    if title:
+        suptitle(title)
     plt.xlabel('t (ms)')
     plt.ylabel('v (mV)')
     plt.show()
 
-def plot_raster(spike_monitor, neurons_to_plot=None, xlimits=None, color='black'):
+def plot_raster(spike_monitor, title=None, neurons_to_plot=None, xlimits=None, color='black'):
     """
     Plot a raster plot using the spike monitor object.
 
@@ -42,6 +44,8 @@ def plot_raster(spike_monitor, neurons_to_plot=None, xlimits=None, color='black'
         xlim(xlimits)
     if neurons_to_plot:
         ylim(neurons_to_plot[0],neurons_to_plot[1])
+    if title:
+        suptitle(title)
     show()
 
 

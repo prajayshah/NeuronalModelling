@@ -55,7 +55,6 @@ V_t = -50 * mV  # threshold
 V_refrac = -60 * mV  # refractory voltage
 
 # Time constants
-tau = 5 * ms
 tau_d = 5 * ms
 tau_g = 100*ms  # used for timescale of the inh. exhaust mechanism need to find better justification for the proper timescale of this for the actual simulation
 
@@ -71,7 +70,7 @@ w_x = 5.4 * nsiemens  # external input synaptic weight
 gi_t = 200 * nsiemens # threshold value after which synaptic inh. strength starts to decrease
 factor = 1 * nsiemens # factor needed for the model eqs for the exhaust inh part
 
-runtime = 3*second
+runtime = 100*second
 dt = 0.1*ms
 
 
@@ -79,11 +78,11 @@ dt = 0.1*ms
 stim_external = True
 # define external stimulus as a TimedArray of time dependent values
 stim_onset = 1.000 * second
-stim_off =   1.150 * second
+stim_off =   1.500 * second
 stim = np.empty([int(runtime / dt), Ntotal])
 # stimulus = TimedArray(stim * amp, dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
 if stim_external:
-    neurons_to_stim = arange(200,300)
+    neurons_to_stim = arange(200,400)
     stim[int(stim_onset / dt):int(stim_off / dt), neurons_to_stim] = 5
     stimulus = TimedArray(stim * amp,
                           dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
@@ -101,7 +100,7 @@ gi_diff = (gi_t - gi)/factor : 1  # note that this is not addition because gi ha
 ''')
 
 #%% NETWORK BUILD PART 2 - SETTING UP BRIAN STRUCTURE
-def build_network(record_id, inh_conn=0.2, input_rate=2.5):
+def build_network(record_id, inh_conn=0.2, input_rate=1):
 
     start_scope()
 
@@ -151,13 +150,13 @@ def build_network(record_id, inh_conn=0.2, input_rate=2.5):
     return net, trace, s_mon, trace_ge, s_mon_p, Ce, Ci, Ge, Gi, G, trace_z, trace_gi, trace_gi_diff
 
 
-def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, trace_gi, trace_ge, neuron, xlimits):
+def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, trace_gi, trace_ge, neuron, xlimits=False):
     "bunch of plots for looking at the Inh. exhaust mech"
     
-    plt.style.use('dark_background')
+    # plt.style.use('dark_background')
     
     figure(figsize=[20,3])
-    plot(s_mon.t/ms, s_mon.i, ',k', color='white')
+    plot(s_mon.t/ms, s_mon.i, ',k', color='black')
     xlabel('t (ms)')
     ylabel('Neuron index')
     show()
@@ -167,7 +166,7 @@ def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, t
     
     
     figure(figsize=[20,3])
-    plot(s_mon.t/ms, s_mon.i, ',k', color = 'white')
+    plot(s_mon.t/ms, s_mon.i, ',k', color = 'black')
     if xlimits:
         xlim(xlimits)
     xlabel('t (ms)')
@@ -175,23 +174,16 @@ def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, t
     show()
     
     figure(figsize=[20,3])
-    plot(s_mon_p.t/ms, s_mon_p.i, ',k', color = 'white')
+    plot(s_mon_p.t/ms, s_mon_p.i, ',k', color = 'black')
     if xlimits:
         xlim(xlimits)
     xlabel('t (ms)')
-    ylabel('Neuron index - input group')
+    ylabel('Neuron index - Poisson input group')
     show()
     
-    
-    b2utils.plot_voltage(voltage_monitor=trace, spike_monitor=s_mon, neuron_id=[neuron], alpha=0.7, ylimits=[-95, 20], xlimits=xlimits)
-#     plt.figure(figsize=[20,3])
-#     plot(trace.t/ms, trace[neuron].V/mV)
-#     if xlimits:
-#         xlim(xlimits)
-#         ylim([-80, -40])
-#     xlabel('t (ms)')
-#     ylabel('mV')
-#     show()
+    for i in neuron:
+        b2utils.plot_voltage(voltage_monitor=trace, spike_monitor=s_mon, title=i,
+                             neuron_id=[i], alpha=0.7, ylimits=[-95, 20], xlimits=xlimits)
 
 
     plt.figure(figsize=[20,3])
@@ -204,7 +196,8 @@ def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, t
     show()
 
     plt.figure(figsize=[20,3])
-    plot(trace_gi_diff.t/ms, trace_gi_diff[neuron].gi_diff)
+    plot(trace_gi_diff.t/ms, trace_gi_diff[neuron[0]].gi_diff)
+    suptitle('Neuron ', i)
     if xlimits:
         xlim(xlimits)
         ylim([-700, 700])
@@ -213,7 +206,8 @@ def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, t
     show()
 
     plt.figure(figsize=[20,3])
-    plot(trace_gi.t/ms, trace_gi[neuron].gi/nS)
+    plot(trace_gi.t/ms, trace_gi[neuron[0]].gi/nS)
+    suptitle('Neuron ', i)
     if xlimits:
         xlim(xlimits)
         ylim([0, 500])
@@ -222,7 +216,8 @@ def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, t
     show()
     
     plt.figure(figsize=[20,3])
-    plot(trace_ge.t/ms, trace_ge[neuron].ge/nS)
+    plot(trace_ge.t/ms, trace_ge[neuron[0]].ge/nS)
+    suptitle('Neuron ', i)
     if xlimits:
         xlim(xlimits)
     xlabel('t (ms)')
@@ -230,21 +225,21 @@ def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, t
     show()
 
 
-# TRANSFERRED BELOW TO NOW RUN OUT OF run_brian_recurrent_net.py
-#%% BUILD AND RUN NETWORK
-# build network
-record_id=[100, 4000, 2300, 3049, 494, 209, 250, 1505]
-net, trace, s_mon, trace_ge, s_mon_p, Ce, Ci, Ge, Gi, G, trace_z, trace_gi, trace_gi_diff = build_network(record_id=record_id, inh_conn=0.2)
-
-# run simulation
-net.run(runtime, report='text')
-
-# %%  quick spike raster plot to initialize plotting
-figure(figsize=[20,3])
-plot(s_mon.t/ms, s_mon.i, ',k'); show()
-spike_counts = s_mon.count
-spike_counts_Hz = array(spike_counts/runtime)
-avg=mean(spike_counts_Hz); print('average spiking rate of population: ', avg, 'Hz')
+# # TRANSFERRED BELOW TO NOW RUN OUT OF run_brian_recurrent_net.py
+# #%% BUILD AND RUN NETWORK
+# # build network
+# record_id=[100, 4000, 2300, 3049, 494, 209, 250, 1505]
+# net, trace, s_mon, trace_ge, s_mon_p, Ce, Ci, Ge, Gi, G, trace_z, trace_gi, trace_gi_diff = build_network(record_id=record_id, inh_conn=0.2)
+#
+# # run simulation
+# net.run(runtime, report='text')
+#
+# # %%  quick spike raster plot to initialize plotting
+# figure(figsize=[20,3])
+# plot(s_mon.t/ms, s_mon.i, ',k'); show()
+# spike_counts = s_mon.count
+# spike_counts_Hz = array(spike_counts/runtime)
+# avg=mean(spike_counts_Hz); print('average spiking rate of population: ', avg, 'Hz')
 
 
 
