@@ -22,12 +22,12 @@ import pandas as pd
 
 
 #%% BUILD AND RUN NETWORK
-runtime = 5*second
+runtime = 3*second
 dt = 0.1*ms
 
 # build network
 record_id=[100, 4000, 2300, 3049, 494, 209, 250, 1505]
-net, trace, s_mon, trace_ge, s_mon_p, Ce, Ci, Ge, Gi, G, trace_z, trace_gi, trace_gi_diff = build_network(record_id=record_id, inh_conn=0.2)
+net, trace, s_mon, trace_ge, s_mon_p, Ce, Ci, Ge, Gi, G, trace_z, trace_gi, trace_gi_diff = build_network(record_id=record_id, inh_conn=0.2, input_rate=2)
 
 # run simulation
 net.run(runtime, report='text')
@@ -39,8 +39,8 @@ spike_counts = s_mon.count
 spike_counts_Hz = array(spike_counts/runtime)
 avg=mean(spike_counts_Hz); print('average spiking rate of population: ', avg, 'Hz')
 
-plt.plot(s_mon.t/ms, array(s_mon.i), ',k')
-plt.show()
+# plt.plot(s_mon.t/ms, array(s_mon.i), ',k')
+# plt.show()
 
 #%% save output of neuronal simulation as arrays and pickles
 
@@ -58,11 +58,7 @@ trace_df = pd.DataFrame(trace.V.T, columns=record_id)
 
 
 # create numpy array of spikes:
-spike_array = np.empty([Ntotal, len(trace.t)])
-for neuron in list(s_mon.all_values()['t'].keys()):
-    print('processing neuron ', neuron+1, ' out of ', Ntotal, end='\r')
-    spike_locs = [int(x) for x in list(s_mon.spike_trains()[neuron])/dt]
-    spike_array[neuron, spike_locs] = 1
+spike_array, spike_counts_binned, spike_raster_binned = make_spike_array(spike_monitor=s_mon, ntotal=Ntotal, runtime=runtime, dt=dt)
 
 # collect 10ms spike bins  (with spike counts per bin as well)
 spike_counts_binned = np.empty([Ntotal, int(runtime/dt/10)])
@@ -70,6 +66,9 @@ spike_raster_binned = np.empty([Ntotal, int(runtime/dt/10)])
 for set in range(int(runtime/dt/10)):
     spike_counts_binned[:,set] = np.sum(spike_array[:,set*10:set*10+10], axis=1)  # count the number of spikes per neuron in the 10ms bin
     spike_raster_binned[np.where(spike_counts_binned[:,set] > 0), set] = 1  # set a positive number of spikes per neuron to 1
+
+
+
 
 #%% calculate correlation coefficients
 corr_mtx = np.corrcoef(spike_raster_binned[Ni:,:])

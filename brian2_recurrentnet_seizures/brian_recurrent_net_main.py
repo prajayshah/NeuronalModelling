@@ -25,6 +25,11 @@ import pandas as pd
 
 from brian2 import *
 
+# %% TODO - need to implement synaptic delays following spikes
+   # TODO - need to implement method for custom weight matrices
+
+
+
 #%% INITIALIZING THE MODEL
 model_name = 'rec_sz1'
 print('Welcome. This model is called ...', model_name)
@@ -44,8 +49,8 @@ print('Welcome. This model is called ...', model_name)
 Cm = 0.25 * nfarad
 gL = 16.7 * nsiemens
 
-Ne = 800*5  # number of E neurons
-Ni = 200*5 # number of I neurons
+Ne = 800  # number of E neurons
+Ni = 200  # number of I neurons
 Nx = 800  # number of X (external population) neurons
 Ntotal  = Ne+Ni
 
@@ -67,7 +72,7 @@ w_e = 2.4 * nsiemens  # excitatory synaptic weight
 w_i = 40 * nsiemens  # inhibitory synaptic weight
 w_x = 5.4 * nsiemens  # external input synaptic weight
 
-gi_t = 200 * nsiemens # threshold value after which synaptic inh. strength starts to decrease
+gi_t = 900 * nsiemens # threshold value after which synaptic inh. strength starts to decrease - raise to like 10000 to inactivate
 factor = 1 * nsiemens # factor needed for the model eqs for the exhaust inh part
 
 runtime = 100*second
@@ -78,14 +83,13 @@ dt = 0.1*ms
 stim_external = True
 # define external stimulus as a TimedArray of time dependent values
 stim_onset = 1.000 * second
-stim_off =   1.500 * second
+stim_off =   1.100 * second
 stim = np.empty([int(runtime / dt), Ntotal])
 # stimulus = TimedArray(stim * amp, dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
 if stim_external:
-    neurons_to_stim = arange(200,400)
+    neurons_to_stim = arange(200,250)
     stim[int(stim_onset / dt):int(stim_off / dt), neurons_to_stim] = 5
-    stimulus = TimedArray(stim * amp,
-                          dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
+stimulus = TimedArray(stim * amp, dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
 
 # The model
 eqs = Equations('''
@@ -112,8 +116,8 @@ def build_network(record_id, inh_conn=0.2, input_rate=1):
     # defining synapses and synaptic connections
     Ce = Synapses(G, G, on_pre='ge+=w_e')
     Ci = Synapses(G, G, on_pre='gi+=w_i')
-    Ce.connect('i<4000', p=0.2)  # Excitatory connectivity
-    Ci.connect('i>=4000', p=inh_conn)  # Inhibitory connectivity
+    Ce.connect('i<800', p=0.2)  # Excitatory connectivity
+    Ci.connect('i>=800', p=inh_conn)  # Inhibitory connectivity
 
     #
     # BACKGROUND Poisson input
@@ -128,7 +132,7 @@ def build_network(record_id, inh_conn=0.2, input_rate=1):
 
 
     # Initialization
-    G.V = 'Vl + rand() * (V_t - Vl)'
+    G.V = 'Vl + rand() * (V_t - Vl)'  # add some randomness to the initial membrane potential
     G.ge = 0
     G.gi = 0
     G.z = 1.
@@ -150,79 +154,79 @@ def build_network(record_id, inh_conn=0.2, input_rate=1):
     return net, trace, s_mon, trace_ge, s_mon_p, Ce, Ci, Ge, Gi, G, trace_z, trace_gi, trace_gi_diff
 
 
-def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, trace_gi, trace_ge, neuron, xlimits=False):
-    "bunch of plots for looking at the Inh. exhaust mech"
-    
-    # plt.style.use('dark_background')
-    
-    figure(figsize=[20,3])
-    plot(s_mon.t/ms, s_mon.i, ',k', color='black')
-    xlabel('t (ms)')
-    ylabel('Neuron index')
-    show()
-    spike_counts = s_mon.count
-    spike_counts_Hz = array(spike_counts/runtime)
-    avg=mean(spike_counts_Hz); print('average spiking rate of population: ', avg, 'Hz')
-    
-    
-    figure(figsize=[20,3])
-    plot(s_mon.t/ms, s_mon.i, ',k', color = 'black')
-    if xlimits:
-        xlim(xlimits)
-    xlabel('t (ms)')
-    ylabel('Neuron index - main group')
-    show()
-    
-    figure(figsize=[20,3])
-    plot(s_mon_p.t/ms, s_mon_p.i, ',k', color = 'black')
-    if xlimits:
-        xlim(xlimits)
-    xlabel('t (ms)')
-    ylabel('Neuron index - Poisson input group')
-    show()
-    
-    for i in neuron:
-        b2utils.plot_voltage(voltage_monitor=trace, spike_monitor=s_mon, title=i,
-                             neuron_id=[i], alpha=0.7, ylimits=[-95, 20], xlimits=xlimits)
-
-
-    plt.figure(figsize=[20,3])
-    plot(trace_z.t/ms, trace_z[neuron].z)
-    if xlimits:
-        xlim(xlimits)
-#         ylim([0.0, 1.0])
-    xlabel('t (ms)')
-    ylabel('z')
-    show()
-
-    plt.figure(figsize=[20,3])
-    plot(trace_gi_diff.t/ms, trace_gi_diff[neuron[0]].gi_diff)
-    suptitle('Neuron ', i)
-    if xlimits:
-        xlim(xlimits)
-        ylim([-700, 700])
-    xlabel('t (ms)')
-    ylabel('gi_diff')
-    show()
-
-    plt.figure(figsize=[20,3])
-    plot(trace_gi.t/ms, trace_gi[neuron[0]].gi/nS)
-    suptitle('Neuron ', i)
-    if xlimits:
-        xlim(xlimits)
-        ylim([0, 500])
-    xlabel('t (ms)')
-    ylabel('gi')
-    show()
-    
-    plt.figure(figsize=[20,3])
-    plot(trace_ge.t/ms, trace_ge[neuron[0]].ge/nS)
-    suptitle('Neuron ', i)
-    if xlimits:
-        xlim(xlimits)
-    xlabel('t (ms)')
-    ylabel('ge')
-    show()
+# def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, trace_gi, trace_ge, neuron, xlimits=False):
+#     "bunch of plots for looking at the Inh. exhaust mech"
+#
+#     # plt.style.use('dark_background')
+#
+#     figure(figsize=[20,3])
+#     plot(s_mon.t/ms, s_mon.i, ',k', color='black')
+#     xlabel('t (ms)')
+#     ylabel('Neuron index')
+#     show()
+#     spike_counts = s_mon.count
+#     spike_counts_Hz = array(spike_counts/runtime)
+#     avg=mean(spike_counts_Hz); print('average spiking rate of population: ', avg, 'Hz')
+#
+#
+#     figure(figsize=[20,3])
+#     plot(s_mon.t/ms, s_mon.i, ',k', color = 'black')
+#     if xlimits:
+#         xlim(xlimits)
+#     xlabel('t (ms)')
+#     ylabel('Neuron index - main group')
+#     show()
+#
+#     figure(figsize=[20,3])
+#     plot(s_mon_p.t/ms, s_mon_p.i, ',k', color = 'black')
+#     if xlimits:
+#         xlim(xlimits)
+#     xlabel('t (ms)')
+#     ylabel('Neuron index - Poisson input group')
+#     show()
+#
+#     for i in neuron:
+#         b2utils.plot_voltage(voltage_monitor=trace, spike_monitor=s_mon, title=i,
+#                              neuron_id=[i], alpha=0.7, ylimits=[-95, 20], xlimits=xlimits)
+#
+#
+#     plt.figure(figsize=[20,3])
+#     plot(trace_z.t/ms, trace_z[neuron[0]].z)
+#     if xlimits:
+#         xlim(xlimits)
+# #         ylim([0.0, 1.0])
+#     xlabel('t (ms)')
+#     ylabel('z')
+#     show()
+#
+#     plt.figure(figsize=[20,3])
+#     plot(trace_gi_diff.t/ms, trace_gi_diff[neuron[0]].gi_diff)
+#     suptitle('Neuron %s' % neuron[0])
+#     if xlimits:
+#         xlim(xlimits)
+#         ylim([-700, 700])
+#     xlabel('t (ms)')
+#     ylabel('gi_diff')
+#     show()
+#
+#     plt.figure(figsize=[20,3])
+#     plot(trace_gi.t/ms, trace_gi[neuron[0]].gi/nS)
+#     suptitle('Neuron %s' % neuron[0])
+#     if xlimits:
+#         xlim(xlimits)
+#         ylim([0, 500])
+#     xlabel('t (ms)')
+#     ylabel('gi')
+#     show()
+#
+#     plt.figure(figsize=[20,3])
+#     plot(trace_ge.t/ms, trace_ge[neuron[0]].ge/nS)
+#     suptitle('Neuron %s' % neuron[0])
+#     if xlimits:
+#         xlim(xlimits)
+#     xlabel('t (ms)')
+#     ylabel('ge')
+#     show()
 
 
 # # TRANSFERRED BELOW TO NOW RUN OUT OF run_brian_recurrent_net.py
