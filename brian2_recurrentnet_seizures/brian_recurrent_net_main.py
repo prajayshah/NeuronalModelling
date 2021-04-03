@@ -72,7 +72,7 @@ w_e = 2.4 * nsiemens  # excitatory synaptic weight
 w_i = 40 * nsiemens  # inhibitory synaptic weight
 w_x = 5.4 * nsiemens  # external input synaptic weight
 
-gi_t = 900 * nsiemens # threshold value after which synaptic inh. strength starts to decrease - raise to like 10000 to inactivate
+gi_t = 800 * nsiemens # threshold value after which synaptic inh. strength starts to decrease - raise to like 10000 to inactivate
 factor = 1 * nsiemens # factor needed for the model eqs for the exhaust inh part
 
 runtime = 100*second
@@ -83,7 +83,7 @@ dt = 0.1*ms
 stim_external = True
 # define external stimulus as a TimedArray of time dependent values
 stim_onset = 1.000 * second
-stim_off =   1.100 * second
+stim_off =   1.250 * second
 stim = np.empty([int(runtime / dt), Ntotal])
 # stimulus = TimedArray(stim * amp, dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
 if stim_external:
@@ -118,6 +118,8 @@ def build_network(record_id, inh_conn=0.2, input_rate=1):
     Ci = Synapses(G, G, on_pre='gi+=w_i')
     Ce.connect('i<800', p=0.2)  # Excitatory connectivity
     Ci.connect('i>=800', p=inh_conn)  # Inhibitory connectivity
+    Ce.delay = '1*ms + randn()/2 * ms'
+    Ci.delay = '0.5*ms + randn()/2 * ms'
 
     #
     # BACKGROUND Poisson input

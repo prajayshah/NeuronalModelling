@@ -44,6 +44,7 @@ P.gi = 0*mV
 we = (60*0.27/10)*mV # excitatory synaptic weight (voltage)  (this is equal to [E_exc = 0mV - V_rest = -60mV] * g_exc = 0.27nS
 wi = (-20*4.5/10)*mV # inhibitory synaptic weight
 Ce = Synapses(P, P, on_pre='ge += we')
+
 Ci = Synapses(P, P, on_pre='gi += wi')
 Ce.connect('i<3200', p=0.8)
 Ci.connect('i>=3200', p=0.5)

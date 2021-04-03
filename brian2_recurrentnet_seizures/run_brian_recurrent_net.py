@@ -72,12 +72,17 @@ for set in range(int(runtime/dt/10)):
 
 #%% calculate correlation coefficients
 corr_mtx = np.corrcoef(spike_raster_binned[Ni:,:])
-corr_values = corr_mtx[np.triu_indices(corr_mtx.shape[0], k=1)]
+x = corr_mtx[np.triu_indices(corr_mtx.shape[0], k=1)]
 # not sure why but there are nan values coming up in the corr_values calculation
 # remove nans from corr_values
 
-corr_values = [value[~np.isnan(value)] for value in corr_values]
+corr_values = x[~np.isnan(x)]
+avg_corr = np.mean(corr_values)
 print(np.mean(corr_values))
+
+plt.hist(corr_values, bins=100, color='gray')
+plt.axvline(x=avg_corr, color='black')
+plt.show()
 
 #%% ANALYSIS OF NETWORK RESULTS - PLOTTING PLOTS
 
@@ -100,57 +105,29 @@ def plot_raster(spike_monitor, neurons_to_plot=None, xlimits=None):
     if neurons_to_plot:
         ylim(neurons_to_plot[0],neurons_to_plot[1])
     show()
-# plot_raster(spike_monitor=s_mon, neurons_to_plot=[2000,2200], xlimits=[500,1500])
 plot_raster(spike_monitor=s_mon)
 
 
 # plot histogram of `spike_counts` per cell
 plt.hist(spike_counts_Hz, bins=100, color='gray')
 plt.axvline(x=avg, color='black')
-plt.title
 plt.show()
 
 
-# plot of binned popn firing rate
-popn_fr = np.sum([element for x, element in enumerate(spike_counts_binned) if x not in neurons_to_stim], axis=0)  # popn fr with stimulated neurons excluded
-plt.figure(figsize=[30,5])
-plt.plot(range(spike_counts_binned.shape[1]), popn_fr, linewidth=0.5)
-plt.ylabel('total population spikes per 10ms bin')
-plt.show()
 
-
-#%% plotting voltage traces
-colors = []
-for i in range(0, len(record_id)):
-    colors.append(generate_new_color(colors, pastel_factor=0.2))
-
-def plot_voltage(voltage_monitor, neurons_to_plot, alpha, xlimits=[]):
-    plt.figure(figsize=[30,5])
-    for neuron in neurons_to_plot:
-        plt.plot(voltage_monitor.t/ms, voltage_monitor[neuron].V/mV, alpha=alpha, color=colors[neurons_to_plot.index(neuron)])
-        # add vertical lines at the spike times for individual neurons (using the values from the spike monitor)
-        plt.vlines(x=np.int_(array(np.round(s_mon.spike_trains()[neuron], 3))*1000), ymin=-50, ymax=0, alpha=alpha, color=colors[neurons_to_plot.index(neuron)])
-    if xlim:
-        xlim(xlimits)
-    plt.xlabel('t (ms)')
-    plt.ylabel('v (mV)')
-    plt.show()
-plot_voltage(voltage_monitor=trace, neurons_to_plot=[100, 4000], alpha=0.7, xlimits=[500, 3500])
 
 
 #%% plotting E and I inputs
 def plot_inputs(e_monitor, i_monitor, neurons_to_plot, alpha, xlimits=None):
-    plt.figure(figsize=[30,5])
-    plt.plot(e_monitor.t/ms, e_monitor[neurons_to_plot].ge, alpha=alpha, color='green')
-    plt.plot(i_monitor.t/ms, i_monitor[neurons_to_plot].gi, alpha=alpha, color='red')
-    if xlimits:
-        plt.xlim(xlimits)
-    plt.xlabel('t (ms)')
-    plt.ylabel('current (siemens)')
+    fig, ax = plt.subplots(figsize=[20,3])
+    ax.plot([e_monitor.t/ms]*len(neurons_to_plot), e_monitor[neurons_to_plot].ge, alpha=alpha, color='green')
+    ax2 = ax.twinx()
+    ax2.plot([i_monitor.t/ms]*len(neurons_to_plot), i_monitor[neurons_to_plot].gi, alpha=alpha, color='red')
+    ax.set_xlabel('t (ms)')
+    ax.set_ylabel('e_monitor, current (siemens)', color='green')
+    ax2.set_ylabel('i_monitor, current (siemens)', color='red')
     plt.show()
-plot_inputs(e_monitor=trace_ge, i_monitor=trace_gi, neurons_to_plot=4000, alpha=0.5, xlimits=[500,1500])
-
-
+plot_inputs(e_monitor=trace_ge, i_monitor=trace_gi, neurons_to_plot=100, alpha=0.5)
 
 #%% plot histogram of cell-to-cell correlation values TODO add time shuffling control to the quantification
 
