@@ -191,3 +191,11 @@ def plot_i_inputs(i_monitor, neurons_to_plot, alpha):
     ax.set_ylabel('i_monitor, current (siemens)', color='red')
     plt.suptitle('Inh. synaptic inputs across neurons #: %s' % neurons_to_plot)
     plt.show()
+
+def plot_connectivity_matrix(conn_matrix, cmap='Purples', clim=[0.05, 0.1]):
+    """plot heatmap of synaptic connectivity matrix given as numpy array where 1 denotes connection between i and j index"""
+    plt.figure(figsize=[10, 10])
+    plt.imshow(conn_matrix, cmap=cmap)
+    plt.clim(clim[0], clim[1])
+    plt.colorbar()
+    plt.show()

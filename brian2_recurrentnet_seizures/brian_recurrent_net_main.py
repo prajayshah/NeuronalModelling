@@ -22,11 +22,13 @@ from brian2_recurrentnet_seizures import brian2_utils as b2utils
 
 import pickle
 import pandas as pd
+import random
+
 
 from brian2 import *
 
-# %% TODO - need to implement synaptic delays following spikes - done to some extent for now
-   # TODO - need to implement method for custom weight matrices
+# %%
+   # TODO - need to implement method for custom synaptic connection/weight matrices
 
 
 
@@ -105,8 +107,33 @@ gi_diff = (gi_t - gi)/factor : 1  # note that this is not addition because gi ha
 
 #%% NETWORK BUILD PART 2 - SETTING UP BRIAN STRUCTURE
 def build_network(record_id, inh_conn=0.2, input_rate=1):
+    import random
 
     start_scope()
+
+    # creating custom synaptic connectivity matrix for recurrent layer -- not quite a full synaptic weights matrix
+    Nn = Ntotal  # number of neurons in the recurrent layer
+    W = np.zeros([Nn, Nn])  # matrix of recurrent connection weights, should be a Nn x Nn size array
+    # W = np.diag(np.ones(Nn)) # -- self connections
+
+    # modifying recurrent connection weights as you want to for the network
+
+    ee_p = 0.2  # probability of e-e connections
+    i_p = inh_conn  # probability of Inh. neurons
+
+    # set E -> all connectivity
+    for i in range(0, int(0.8 * Nn)):
+        idx = random.sample(range(len(W[i])), int(
+            ee_p * len(W[i])))  # select random indexes to setup as connections based on selected probability
+        W[i, idx] = 1
+
+    # set I -> all connectivity
+    for i in range(int(0.8 * Nn), Nn):
+        idx = random.sample(range(len(W[i])), int(
+            i_p * len(W[i])))  # select random indexes to setup as connections based on selected probability
+        W[i, idx] = 1
+
+
 
     G = NeuronGroup(Ntotal, model=eqs, threshold='V > V_t', refractory=2*ms, reset= 'V = V_refrac',
                     method='euler', dt=0.1*ms)
@@ -114,14 +141,29 @@ def build_network(record_id, inh_conn=0.2, input_rate=1):
     Gi = G[Ne:Ntotal]
 
     # defining synapses and synaptic connections
-    Ce = Synapses(G, G, on_pre='ge+=w_e')
-    Ci = Synapses(G, G, on_pre='gi+=w_i')
-    Ce.connect('i<800', p=0.2)  # Excitatory connectivity
-    Ci.connect('i>=800', p=inh_conn)  # Inhibitory connectivity
+
+    # the standard way of starting a synapses class
+    # Ce = Synapses(G, G, on_pre='ge+=w_e')
+    # Ci = Synapses(G, G, on_pre='gi+=w_i')
+    # Ce.connect('i<800', p=0.2)  # Excitatory connectivity
+    # Ci.connect('i>=800', p=inh_conn)  # Inhibitory connectivity
+
+
+    # using custom synaptic connectivity matrix from above
+    sources, targets = W[:int(0.8 * Nn)].nonzero()
+    Ce = Synapses(G, G, on_pre='ge += we')
+    Ce.connect(i=sources, j=targets)
+
+    sources, targets = W[int(0.8 * Nn):].nonzero()
+    Ci = Synapses(G, G, on_pre='gi += wi')
+    Ci.connect(i=sources, j=targets)
+    #
+
+    # adding a synaptic delay to the pre-synaptic pathways
     Ce.delay = '1*ms + randn()/2 * ms'
     Ci.delay = '0.5*ms + randn()/2 * ms'
-
     #
+
     # BACKGROUND Poisson input
     P = PoissonGroup(Nx, rates=input_rate*Hz, dt=0.1*ms)
     CX = Synapses(P, G, on_pre='ge+=w_x')
@@ -153,7 +195,7 @@ def build_network(record_id, inh_conn=0.2, input_rate=1):
 
     net = Network(collect())
 
-    return net, trace, s_mon, trace_ge, s_mon_p, Ce, Ci, Ge, Gi, G, trace_z, trace_gi, trace_gi_diff
+    return net, W, trace, s_mon, trace_ge, s_mon_p, Ce, Ci, Ge, Gi, G, trace_z, trace_gi, trace_gi_diff
 
 
 # def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, trace_gi, trace_ge, neuron, xlimits=False):
