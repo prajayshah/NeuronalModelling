@@ -51,10 +51,8 @@ print('Welcome. This model is called ...', model_name)
 Cm = 0.25 * nfarad
 gL = 16.7 * nsiemens
 
-Ne = 800  # number of E neurons
-Ni = 200  # number of I neurons
 Nx = 800  # number of X (external population) neurons
-Ntotal  = Ne+Ni
+Ntotal  = 1000  # total number of neurons (80/20 split for E and I neurons defined below in the network build function)
 
 tau = 15 * ms
 Vl = -75 * mV  # resting potential

@@ -197,5 +197,6 @@ def plot_connectivity_matrix(conn_matrix, cmap='Purples', clim=[0.05, 0.1]):
     plt.figure(figsize=[10, 10])
     plt.imshow(conn_matrix, cmap=cmap)
     plt.clim(clim[0], clim[1])
+    plt.suptitle('Binary synaptic connectivity matrix (source neurons on left axis, target neurons on bottom axis)')
     plt.colorbar()
     plt.show()
