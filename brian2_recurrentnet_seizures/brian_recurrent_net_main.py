@@ -25,7 +25,7 @@ import pandas as pd
 
 from brian2 import *
 
-# %% TODO - need to implement synaptic delays following spikes
+# %% TODO - need to implement synaptic delays following spikes - done to some extent for now
    # TODO - need to implement method for custom weight matrices
 
 
@@ -61,7 +61,7 @@ V_refrac = -60 * mV  # refractory voltage
 
 # Time constants
 tau_d = 5 * ms
-tau_g = 100*ms  # used for timescale of the inh. exhaust mechanism need to find better justification for the proper timescale of this for the actual simulation
+tau_g = 50*ms  # used for timescale of the inh. exhaust mechanism need to find better justification for the proper timescale of this for the actual simulation
 
 
 # Reversal potentials
@@ -80,7 +80,7 @@ dt = 0.1*ms
 
 
 # # EXTERNAL STIMULUS (I KNOW THAT THE ORDER OF THIS IS REALLY WEIRD BUT THIS SECTION AND THE MODEL EQS CANNOT BE ADDED TO THE NETWORK BUILD FUNCTION DEFINITION SINCE IT KICKS UP ERRORS IN BRIAN
-stim_external = True
+stim_external = False
 # define external stimulus as a TimedArray of time dependent values
 stim_onset = 1.000 * second
 stim_off =   1.250 * second
