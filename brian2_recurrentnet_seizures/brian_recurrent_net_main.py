@@ -151,11 +151,11 @@ def build_network(record_id, inh_conn=0.2, input_rate=1):
 
     # using custom synaptic connectivity matrix from above
     sources, targets = W[:int(0.8 * Nn)].nonzero()
-    Ce = Synapses(G, G, on_pre='ge += we')
+    Ce = Synapses(G, G, on_pre='ge += w_e')
     Ce.connect(i=sources, j=targets)
 
     sources, targets = W[int(0.8 * Nn):].nonzero()
-    Ci = Synapses(G, G, on_pre='gi += wi')
+    Ci = Synapses(G, G, on_pre='gi += w_i')
     Ci.connect(i=sources, j=targets)
     #
 
