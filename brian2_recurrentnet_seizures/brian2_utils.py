@@ -2,8 +2,52 @@ import sys; sys.path.append('/Users/prajayshah/OneDrive - University of Toronto/
 
 from funcs_pj import generate_new_color
 from brian2 import *
+from numba import njit
 
 
+# UTILITIES FOR ANLAYSIS OF DATA
+# not sure that this actually works with very sparsely firing networks where some neurons have no firing
+def make_spike_array(spike_monitor_trains, ntotal, runtime, dt, binsize=10):
+    spike_array = np.empty([ntotal, int(runtime / dt)])
+
+    for neuron in range(ntotal):
+        #         if neuron % 100 == 0:  # print the progress once every 100 cell iterations
+        #             print(neuron, " out of ", ntotal, " cells done")
+        spike_locs = spike_monitor_trains[neuron]
+        spike_array[neuron, spike_locs] = 1
+
+    print('collected binned spikes rasters...')
+
+    # collect 10ms spike bins  (with spike counts per bin as well)
+    spike_counts_binned = np.empty([ntotal, int(runtime / dt / binsize)])
+    spike_raster_binned = np.empty([ntotal, int(runtime / dt / binsize)])
+    for set in range(int(runtime / dt / binsize)):
+        spike_counts_binned[:, set] = np.sum(spike_array[:, set * binsize:set * binsize + binsize],
+                                             axis=1)  # count the number of spikes per neuron in the 10ms bin
+        spike_raster_binned[
+            np.where(spike_counts_binned[:, set] > 0), set] = 1  # set a positive number of spikes per neuron to 1
+
+    return spike_array, spike_raster_binned, spike_counts_binned
+
+# calculate correlation coefficients
+def corr_coef(spike_raster_binned, plot: bool = True):
+    corr_mtx = np.corrcoef(spike_raster_binned)
+    x = corr_mtx[np.triu_indices(corr_mtx.shape[0], k=1)]
+    # not sure why but there are nan values coming up in the corr_values calculation
+    # remove nans from corr_values
+
+    corr_values = x[~np.isnan(x)]
+    avg_corr = np.mean(corr_values)
+    print('Avg. corr coef value: ', avg_corr)
+
+    plt.hist(corr_values, bins=100, color='gray')
+    plt.axvline(x=avg_corr, color='black')
+    plt.show()
+
+    return corr_values
+
+
+# PLOTTING FUNCTIONS
 def plot_raster(spike_monitor, title='Raster plot', neurons_to_plot=None, xlimits=None, color='black'):
     """
     Plot a raster plot using the spike monitor object.
@@ -23,28 +67,6 @@ def plot_raster(spike_monitor, title='Raster plot', neurons_to_plot=None, xlimit
     if title:
         suptitle(title)
     show()
-
-def make_spike_array(spike_monitor, ntotal, runtime, dt, binsize=10):
-    spike_array = np.empty([ntotal, int(runtime / dt)])
-
-    for neuron in range(ntotal):
-        if neuron % 100 == 0:  # print the progress once every 100 cell iterations
-            print(neuron, " out of ", ntotal, " cells done", end='\r')
-        spike_locs = (list(spike_monitor.spike_trains()[neuron])/dt).astype(int64)
-        spike_array[neuron, spike_locs] = 1
-
-    print('done collecting spikes for all cells')
-
-    # collect 10ms spike bins  (with spike counts per bin as well)
-    spike_counts_binned = np.empty([ntotal, int(runtime / dt / binsize)])
-    spike_raster_binned = np.empty([ntotal, int(runtime / dt / binsize)])
-    for set in range(int(runtime / dt / binsize)):
-        spike_counts_binned[:, set] = np.sum(spike_array[:, set * binsize:set * binsize + binsize],
-                                             axis=1)  # count the number of spikes per neuron in the 10ms bin
-        spike_raster_binned[
-            np.where(spike_counts_binned[:, set] > 0), set] = 1  # set a positive number of spikes per neuron to 1
-
-    return spike_array, spike_raster_binned, spike_counts_binned
 
 
 def plot_voltage(voltage_monitor, spike_monitor, alpha, ylimits, xlimits, neuron_id=[],
@@ -72,11 +94,11 @@ def plot_voltage(voltage_monitor, spike_monitor, alpha, ylimits, xlimits, neuron
     plt.show()
 
 
-def plot_firing_rate(spike_raster_binned, binsize_s=0.01, title='Population Firing rate'):
+def plot_firing_rate(spike_raster_binned, binsize_sec=0.01, title: str = 'Population Firing rate'):
     """calculate and plot firing rate across 10ms timebins"""
 
     firing_rate_binned = np.sum(spike_raster_binned, axis=0)
-    firing_rate_binned_norm = firing_rate_binned / binsize_s
+    firing_rate_binned_norm = firing_rate_binned / binsize_sec
     plt.figure(figsize=[20, 3])
     plt.plot(firing_rate_binned_norm, c='black', linewidth=1)
     plt.suptitle(title)
@@ -150,7 +172,8 @@ def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, t
     show()
 
     plt.figure(figsize=[20, 3])
-    plot(trace_z.t / ms, trace_z[neuron[0]].z, color='black')
+    plot(trace_z.t / ms, trace_z[neuron[0]].z, color='purple')
+    suptitle('z variable - Neuron %s' % neuron[0])
     if xlimits:
         xlim(xlimits)
     #         ylim([0.0, 1.0])
@@ -192,11 +215,14 @@ def plot_i_inputs(i_monitor, neurons_to_plot, alpha):
     plt.suptitle('Inh. synaptic inputs across neurons #: %s' % neurons_to_plot)
     plt.show()
 
-def plot_connectivity_matrix(conn_matrix, cmap='Purples', clim=[0.05, 0.1]):
+
+def plot_connectivity_matrix(conn_matrix, cmap='Purples', color_lim=[0.05, 0.1], colorbar=False, title: bool = True):
     """plot heatmap of synaptic connectivity matrix given as numpy array where 1 denotes connection between i and j index"""
     plt.figure(figsize=[10, 10])
     plt.imshow(conn_matrix, cmap=cmap)
-    plt.clim(clim[0], clim[1])
-    plt.suptitle('Binary synaptic connectivity matrix (source neurons on left axis, target neurons on bottom axis)')
-    plt.colorbar()
+    plt.clim(color_lim[0], color_lim[1])
+    if title:
+        plt.suptitle('Binary synaptic connectivity matrix (source neurons on left axis, target neurons on bottom axis)', wrap=True, pad=20)
+    if colorbar:
+        plt.colorbar()
     plt.show()

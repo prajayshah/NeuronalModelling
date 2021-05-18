@@ -24,13 +24,18 @@ import pandas as pd
 #%% BUILD AND RUN NETWORK
 runtime = 3*second
 dt = 0.1*ms
+inh_conn = 0.2
+Ntotal = 5000
+input_rate = 2.5
 
 # build network
-record_id=[100, 4000, 2300, 3049, 494, 209, 250, 1505]
-net, trace, s_mon, trace_ge, s_mon_p, Ce, Ci, Ge, Gi, G, trace_z, trace_gi, trace_gi_diff = build_network(record_id=record_id, inh_conn=0.2, input_rate=2)
+record_id=[100, 4000, 4300, 4400, 2300, 3049, 494, 209, 250, 1505]
+net, W, trace, s_mon, trace_ge, s_mon_p, Ce, Ci, Ge, Gi, G, trace_z, trace_gi, trace_gi_diff = \
+    build_network(Ntotal=Ntotal, record_id=record_id, runtime = runtime, inh_conn=inh_conn, input_rate=input_rate,
+                  stim_external = True, neurons_to_stim = arange(208, 214))
 
 # run simulation
-net.run(runtime, report='text')
+# net.run(runtime, report='text')
 
 # quick spike raster plot to initialize plotting
 figure(figsize=[20,3])
