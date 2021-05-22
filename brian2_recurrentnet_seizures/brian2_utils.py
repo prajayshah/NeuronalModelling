@@ -2,10 +2,12 @@ import sys; sys.path.append('/Users/prajayshah/OneDrive - University of Toronto/
 
 from funcs_pj import generate_new_color
 from brian2 import *
-from numba import njit
+from sklearn.decomposition import PCA
+import pandas as pd
+from scipy import stats
 
 
-# UTILITIES FOR ANLAYSIS OF DATA
+######## UTILITIES FOR ANLAYSIS OF DATA ################################################################################
 # not sure that this actually works with very sparsely firing networks where some neurons have no firing
 def make_spike_array(spike_monitor_trains, ntotal, runtime, dt, binsize=10):
     spike_array = np.empty([ntotal, int(runtime / dt)])
@@ -47,7 +49,49 @@ def corr_coef(spike_raster_binned, plot: bool = True):
     return corr_values
 
 
-# PLOTTING FUNCTIONS
+# PCA on dataset
+def pca_spike_raster(spike_raster_binned):
+    pca = PCA(n_components=min(spike_raster_binned.shape))
+    pca.fit(spike_raster_binned)
+    pca_result = pd.DataFrame(pca.transform(spike_raster_binned))  # , columns=['PCA%i' % i for i in range(275)])
+    sv = pca.singular_values_
+    su = (sv / sum(sv))
+    return pca.explained_variance_ratio_
+
+
+# fit and plot variance per PC
+def powerlawfit(data: np.array, subset: list = None):
+    x = range(len(data))[subset[0]:subset[1]]
+    y = data[subset[0]:subset[1]]
+
+    # to perform powerlaw fit, first take data into log-log space and then do linear regression in that space
+    res = stats.linregress(np.log2(x), np.log2(y))
+    print(res)
+    plt.plot(np.log2(range(len(data))), np.log2(data), label='original data', color='darkblue')
+    plt.plot(np.log2(x), res.intercept + res.slope * np.log2(x), c = 'darkgreen', label='fitted line')
+    plt.show()
+
+    return res.slope
+
+# #%%
+# import matplotlib.pyplot as plt
+# import numpy as np
+# x = np.linspace(1, 10 ** 2, 10 ** 2)
+# y = 1 / (x ** 1.1)
+# plt.scatter(x, y); plt.show()
+#
+# def func(x, a, b):
+#     return x**a + b
+#
+# fit = np.polyfit(np.log(x), np.log(y), 1)
+# plt.scatter(x, y)
+# plt.plot(x, func(x, *fit), color='orange'); plt.show()
+
+
+#%%
+
+
+######## PLOTTING FUNCTIONS ############################################################################################
 def plot_raster(spike_monitor, title='Raster plot', neurons_to_plot=None, xlimits=None, color='black'):
     """
     Plot a raster plot using the spike monitor object.
@@ -184,9 +228,9 @@ def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, t
 
 def plot_inputs(e_monitor, i_monitor, neurons_to_plot, alpha, xlimits=None):
     fig, ax = plt.subplots(figsize=[20, 3])
-    ax.plot([e_monitor.t / ms] * len(neurons_to_plot), e_monitor[neurons_to_plot].ge, alpha=alpha, color='salmon')
+    ax.plot([i_monitor.t / ms] * len(neurons_to_plot), i_monitor[neurons_to_plot].gi, alpha=alpha, color='deepskyblue')
     ax2 = ax.twinx()
-    ax2.plot([i_monitor.t / ms] * len(neurons_to_plot), i_monitor[neurons_to_plot].gi, alpha=alpha, color='deepskyblue')
+    ax2.plot([e_monitor.t / ms] * len(neurons_to_plot), e_monitor[neurons_to_plot].ge, alpha=alpha, color='salmon')
     ax.set_xlabel('t (ms)')
     ax.set_ylabel('e_monitor, current (siemens)', color='salmon')
     ax2.set_ylabel('i_monitor, current (siemens)', color='deepskyblue')
@@ -216,13 +260,16 @@ def plot_i_inputs(i_monitor, neurons_to_plot, alpha):
     plt.show()
 
 
-def plot_connectivity_matrix(conn_matrix, cmap='Purples', color_lim=[0.05, 0.1], colorbar=False, title: bool = True):
+def plot_connectivity_matrix(conn_matrix, cmap='Purples', color_lim=[0.05, 0.1], colorbar=False):
     """plot heatmap of synaptic connectivity matrix given as numpy array where 1 denotes connection between i and j index"""
-    plt.figure(figsize=[10, 10])
-    plt.imshow(conn_matrix, cmap=cmap)
-    plt.clim(color_lim[0], color_lim[1])
-    if title:
-        plt.suptitle('Binary synaptic connectivity matrix (source neurons on left axis, target neurons on bottom axis)', wrap=True, pad=20)
+    # plt.figure(figsize=[10, 10])
+    fig, ax = plt.subplots(figsize=(10, 10))
+
+    ax = ax.imshow(conn_matrix, cmap=cmap, vmin=color_lim[0], vmax=color_lim[1])
+#     plt.clim(color_lim[0], color_lim[1])
+#     if title is not None:
+#         ax.set_title(title)
+    plt.suptitle('Binary synaptic connectivity matrix (source neurons on left axis, target neurons on bottom axis)', wrap=True, y = 0.90)
     if colorbar:
         plt.colorbar()
     plt.show()
