@@ -64,11 +64,19 @@ def powerlawfit(data: np.array, subset: list = None):
     x = range(len(data))[subset[0]:subset[1]]
     y = data[subset[0]:subset[1]]
 
+
     # to perform powerlaw fit, first take data into log-log space and then do linear regression in that space
     res = stats.linregress(np.log2(x), np.log2(y))
     print(res)
-    plt.plot(np.log2(range(len(data))), np.log2(data), label='original data', color='darkblue')
-    plt.plot(np.log2(x), res.intercept + res.slope * np.log2(x), c = 'darkgreen', label='fitted line')
+
+    x_fit = range(len(data))
+    y_fit = res.intercept + res.slope * np.log2(x_fit)
+
+    fig, ax = plt.subplots(figsize=[6,6])
+    ax.plot(np.log2(range(len(data))), np.log2(data), label='original data', color='darkblue')
+    ax.plot(np.log2(x_fit), y_fit, c = 'darkgreen', label='fitted line')
+    ax.set_xlabel('PC Dimension')
+    ax.set_ylabel('Variance (|eigenvalue|)')
     plt.show()
 
     return res.slope
