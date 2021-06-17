@@ -69,7 +69,7 @@ def powerlawfit(data: np.array, subset: list = None):
     res = stats.linregress(np.log2(x), np.log2(y))
     print(res)
 
-    x_fit = range(len(data))
+    x_fit = range(len(data))[int(0.2*len(data)): -int(0.2*len(data))]
     y_fit = res.intercept + res.slope * np.log2(x_fit)
 
     fig, ax = plt.subplots(figsize=[6,6])
@@ -146,15 +146,16 @@ def plot_voltage(voltage_monitor, spike_monitor, alpha, ylimits, xlimits, neuron
     plt.show()
 
 
-def plot_firing_rate(spike_raster_binned, binsize_sec=0.01, title: str = 'Population Firing rate'):
+def plot_firing_rate(spike_raster_binned, binsize_sec=0.01, title: str = 'Neuronal Population Firing rate'):
     """calculate and plot firing rate across 10ms timebins"""
 
     firing_rate_binned = np.sum(spike_raster_binned, axis=0)
     firing_rate_binned_norm = firing_rate_binned / binsize_sec
     plt.figure(figsize=[20, 3])
     plt.plot(firing_rate_binned_norm, c='black', linewidth=1)
+    plt.xlabel('Time (ms)')
+    plt.ylabel('Population Firing rate (Hz)')
     plt.suptitle(title)
-    plt.ylabel('Firing rate value (Hz)')
     plt.show()
 
 
