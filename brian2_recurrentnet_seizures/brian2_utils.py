@@ -96,6 +96,9 @@ def powerlawfit(data: np.array, subset: list = None):
 # plt.plot(x, func(x, *fit), color='orange'); plt.show()
 
 
+
+
+
 #%%
 
 
@@ -154,7 +157,7 @@ def plot_firing_rate(spike_raster_binned, binsize_sec=0.01, title: str = 'Neuron
     plt.figure(figsize=[20, 3])
     plt.plot(firing_rate_binned_norm, c='black', linewidth=1)
     plt.xlabel('Time (ms)')
-    plt.ylabel('Population Firing rate (Hz)')
+    plt.ylabel('Populationi Firing rate (Hz)')
     plt.suptitle(title)
     plt.show()
 
