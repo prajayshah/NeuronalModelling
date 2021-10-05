@@ -1,6 +1,6 @@
-import sys; sys.path.append('/Users/prajayshah/OneDrive - University of Toronto/PycharmProjects/utils_praj')
+import sys; sys.path.append('/home/pshah/Documents/code/utils_praj')
 
-from funcs_pj import generate_new_color
+from funcs_pj import _generate_new_color
 from brian2 import *
 from sklearn.decomposition import PCA
 import pandas as pd
@@ -129,7 +129,7 @@ def plot_voltage(voltage_monitor, spike_monitor, alpha, ylimits, xlimits, neuron
     # make random color choices
     colors = []
     for i in range(len(neuron_id)):
-        colors.append(generate_new_color(colors, pastel_factor=0.2))
+        colors.append(_generate_new_color(colors, pastel_factor=0.2))
 
     # make plot
     plt.figure(figsize=[20, 3])
@@ -277,11 +277,14 @@ def plot_connectivity_matrix(conn_matrix, cmap='Purples', color_lim=[0.05, 0.1],
     # plt.figure(figsize=[10, 10])
     fig, ax = plt.subplots(figsize=(10, 10))
 
-    ax = ax.imshow(conn_matrix, cmap=cmap, vmin=color_lim[0], vmax=color_lim[1])
+    hmap = ax.imshow(conn_matrix, cmap=cmap, vmin=color_lim[0], vmax=color_lim[1])
 #     plt.clim(color_lim[0], color_lim[1])
 #     if title is not None:
 #         ax.set_title(title)
-    plt.suptitle('Binary synaptic connectivity matrix (source neurons on left axis, target neurons on bottom axis)', wrap=True, y = 0.90)
+    ax.set_title('Binary synaptic connectivity matrix (source neurons on left axis, target neurons on bottom axis)')
     if colorbar:
-        plt.colorbar()
-    plt.show()
+        color_bar = fig.colorbar(hmap, ax=ax, extend='both')
+        color_bar.minorticks_on()
+    ax.set_xlabel('Neurons (source)')
+    ax.set_ylabel('Neurons (target)')
+    fig.show()
