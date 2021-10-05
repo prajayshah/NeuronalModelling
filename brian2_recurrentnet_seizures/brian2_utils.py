@@ -9,30 +9,51 @@ from scipy import stats
 
 ######## UTILITIES FOR ANLAYSIS OF DATA ################################################################################
 # not sure that this actually works with very sparsely firing networks where some neurons have no firing
-def make_spike_array(spike_monitor_trains, ntotal, runtime, dt, binsize=10):
-    spike_array = np.empty([ntotal, int(runtime / dt)])
+def make_spike_array(spike_monitor_trains:np.array, ntotal, rectime, rec_offset=0, dt=0.0001, binsize = 0.010):
+    """
+    make a spike array from an array of neurons x spike_times
+    Parameters
+    ----------
+    spike_monitor_trains: an array or list of neurons x spike_times
+    ntotal: # of total neurons (should be same as
+    rectime: total recording time of simulation (seconds)
+    rec_offset: how to offset the spike locations (if they are relative to the total simulation time and NOT the total recording time)
+    dt: time resolution of simulation (seconds)
+    binsize: size of bin to use for making spike array (sec)
+
+    Returns
+    -------
+
+    """
+    assert ntotal == len(spike_monitor_trains)
+    spike_array = np.zeros([ntotal, int(rectime / dt)])
 
     for neuron in range(ntotal):
         #         if neuron % 100 == 0:  # print the progress once every 100 cell iterations
         #             print(neuron, " out of ", ntotal, " cells done")
-        spike_locs = spike_monitor_trains[neuron]
+        spike_locs = (spike_monitor_trains[neuron] - rec_offset) * (
+                    dt * 1e5) - 1  # 0.1ms units; and substracting by one because the spike_ex doesn't necessarily follow 0 based index as numpy needs
+        if type(spike_locs) is not list:
+            spike_locs = list(spike_locs)
+        spike_locs = [int(x) for x in spike_locs]
         spike_array[neuron, spike_locs] = 1
 
-    print('collected binned spikes rasters...')
+    print('collecting binned spikes rasters... %s ms bin size' % (binsize * 10 ** 3))
 
-    # collect 10ms spike bins  (with spike counts per bin as well)
-    spike_counts_binned = np.empty([ntotal, int(runtime / dt / binsize)])
-    spike_raster_binned = np.empty([ntotal, int(runtime / dt / binsize)])
-    for set in range(int(runtime / dt / binsize)):
-        spike_counts_binned[:, set] = np.sum(spike_array[:, set * binsize:set * binsize + binsize],
-                                             axis=1)  # count the number of spikes per neuron in the 10ms bin
+    # collect spike bins  (with spike counts per bin as well)
+    spike_counts_binned = np.zeros([ntotal, int(rectime / dt / (binsize / dt))])
+    spike_raster_binned = np.zeros([ntotal, int(rectime / dt / (binsize / dt))])
+    for set in range(int(rectime / dt / (binsize / dt))):
+        spike_counts_binned[:, set] = np.sum(
+            spike_array[:, int(set * binsize / dt): int(set * binsize / dt + binsize / dt)],
+            axis=1)  # count the number of spikes per neuron in the 10ms bin
         spike_raster_binned[
             np.where(spike_counts_binned[:, set] > 0), set] = 1  # set a positive number of spikes per neuron to 1
 
     return spike_array, spike_raster_binned, spike_counts_binned
 
 # calculate correlation coefficients
-def corr_coef(spike_raster_binned, plot: bool = True):
+def corr_coef(spike_raster_binned, binsize, plot: bool = True):
     corr_mtx = np.corrcoef(spike_raster_binned)
     x = corr_mtx[np.triu_indices(corr_mtx.shape[0], k=1)]
     # not sure why but there are nan values coming up in the corr_values calculation
@@ -44,9 +65,12 @@ def corr_coef(spike_raster_binned, plot: bool = True):
 
     plt.hist(corr_values, bins=100, color='gray')
     plt.axvline(x=avg_corr, color='black')
+    plt.xlabel('correlation coefficient')
+    plt.ylabel('density')
+    plt.suptitle('avg corr coef distribution, binsize = %s ms' % (binsize * 1000))
     plt.show()
 
-    return corr_values
+    return avg_corr
 
 
 # PCA on dataset
@@ -149,16 +173,18 @@ def plot_voltage(voltage_monitor, spike_monitor, alpha, ylimits, xlimits, neuron
     plt.show()
 
 
-def plot_firing_rate(spike_raster_binned, binsize_sec=0.01, title: str = 'Neuronal Population Firing rate'):
+def plot_firing_rate(spike_raster_binned, rec_start, rec_stop, binsize_sec=0.01, title: str = 'Neuronal Population Firing rate'):
     """calculate and plot firing rate across 10ms timebins"""
 
     firing_rate_binned = np.sum(spike_raster_binned, axis=0)
-    firing_rate_binned_norm = firing_rate_binned / binsize_sec
+    firing_rate_binned_norm = firing_rate_binned / binsize_sec / spike_raster_binned.shape[0]
     plt.figure(figsize=[20, 3])
     plt.plot(firing_rate_binned_norm, c='black', linewidth=1)
     plt.xlabel('Time (ms)')
-    plt.ylabel('Populationi Firing rate (Hz)')
-    plt.suptitle(title)
+    plt.ylabel('Population Firing rate (Hz)')
+    plt.xlim(params['rec_start']/1000/binsize_sec, params['rec_stop']/1000/binsize_sec)
+    # title = 'avg firing rate %s' % (np.sum(firing_rate_binned_norm[params['rec_start']/1000/binsize_sec:params['rec_stop']/1000/binsize_sec])/len(firing_rate_binned_norm[params['rec_start']/1000/binsize_sec:params['rec_stop']/1000/binsize_sec]))
+    plt.suptitle(title + ', binsize = %s ms' % (binsize_sec * 1000))
     plt.show()
 
 
