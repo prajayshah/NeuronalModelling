@@ -1,6 +1,6 @@
 import sys; sys.path.append('/home/pshah/Documents/code/utils_praj')
 
-from funcs_pj import _generate_new_color
+from funcs_pj import generate_new_color
 from brian2 import *
 from sklearn.decomposition import PCA
 import pandas as pd
@@ -31,8 +31,7 @@ def make_spike_array(spike_monitor_trains:np.array, ntotal, rectime, rec_offset=
     for neuron in range(ntotal):
         #         if neuron % 100 == 0:  # print the progress once every 100 cell iterations
         #             print(neuron, " out of ", ntotal, " cells done")
-        spike_locs = (spike_monitor_trains[neuron] - rec_offset) * (
-                    dt * 1e5) - 1  # 0.1ms units; and substracting by one because the spike_ex doesn't necessarily follow 0 based index as numpy needs
+        spike_locs = (spike_monitor_trains[neuron] - rec_offset)
         if type(spike_locs) is not list:
             spike_locs = list(spike_locs)
         spike_locs = [int(x) for x in spike_locs]
@@ -153,7 +152,7 @@ def plot_voltage(voltage_monitor, spike_monitor, alpha, ylimits, xlimits, neuron
     # make random color choices
     colors = []
     for i in range(len(neuron_id)):
-        colors.append(_generate_new_color(colors, pastel_factor=0.2))
+        colors.append(generate_new_color(colors, pastel_factor=0.2))
 
     # make plot
     plt.figure(figsize=[20, 3])
@@ -182,7 +181,7 @@ def plot_firing_rate(spike_raster_binned, rec_start, rec_stop, binsize_sec=0.01,
     plt.plot(firing_rate_binned_norm, c='black', linewidth=1)
     plt.xlabel('Time (ms)')
     plt.ylabel('Population Firing rate (Hz)')
-    plt.xlim(params['rec_start']/1000/binsize_sec, params['rec_stop']/1000/binsize_sec)
+    plt.xlim(rec_start, rec_stop)
     # title = 'avg firing rate %s' % (np.sum(firing_rate_binned_norm[params['rec_start']/1000/binsize_sec:params['rec_stop']/1000/binsize_sec])/len(firing_rate_binned_norm[params['rec_start']/1000/binsize_sec:params['rec_stop']/1000/binsize_sec]))
     plt.suptitle(title + ', binsize = %s ms' % (binsize_sec * 1000))
     plt.show()
@@ -309,7 +308,7 @@ def plot_connectivity_matrix(conn_matrix, cmap='Purples', color_lim=[0.05, 0.1],
 #         ax.set_title(title)
     ax.set_title('Binary synaptic connectivity matrix (source neurons on left axis, target neurons on bottom axis)')
     if colorbar:
-        color_bar = fig.colorbar(hmap, ax=ax, extend='both')
+        color_bar = fig.colorbar(hmap, ax=ax)
         color_bar.minorticks_on()
     ax.set_xlabel('Neurons (source)')
     ax.set_ylabel('Neurons (target)')

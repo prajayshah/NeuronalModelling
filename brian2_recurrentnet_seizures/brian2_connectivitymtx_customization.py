@@ -140,3 +140,18 @@ plt.show()
 spike_counts = s_mon.count
 spike_counts_Hz = array(spike_counts/runtime)
 avg=mean(spike_counts_Hz); print('average spiking rate of population: ', np.round(avg, 2), 'Hz')
+
+
+# %% 2.1) low rank connectivity - outer product of two vectors
+
+def setrandomvector(min, max, N):
+    return (max - min) * np.random.random(N) + min
+
+N = 2000
+
+v1 = setrandomvector(0.5, 1.5, N)
+v2 = setrandomvector(0.5, 1.5, N)
+
+mtx = np.outer(v1, v2)  # structured connectivity matrix
+
+plot_connectivity_matrix(conn_matrix=mtx.T, color_lim=[0.5, 1.5], colorbar=True)
