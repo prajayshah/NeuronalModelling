@@ -102,8 +102,25 @@ print('Welcome. This model is called ...', model_name)
 # ''')
 
 #%% NETWORK BUILD PART 2 - SETTING UP BRIAN STRUCTURE
-def build_network(Ntotal, record_id, runtime, w_matrix = None, inh_conn=0.2, input_rate=1, stim_external: bool = False, neurons_to_stim: arange = arange(0, 10),
+def build_network(Ntotal, record_id, runtime, weight_matrix=None, conn_matrix = None, inh_conn=0.2, input_rate=1, stim_external: bool = False, neurons_to_stim: arange = arange(0, 10),
                   Ne: list = None, Ni: list = None):
+
+    """
+    Main function for building the Brian network.
+
+    :param Ntotal: total number of neurons
+    :param record_id: neurons (indexes) to record
+    :param runtime: total time to run simulation
+    :param weight_matrix: synaptic weight matrix
+    :param conn_matrix: binary connectivity matrix
+    :param inh_conn: probability of inhibitory connectivity
+    :param input_rate: firing rate of external Poisson population
+    :param stim_external: boolean; True or False; timed array external stimulation
+    :param neurons_to_stim: neurons (range of indexes) to stimulate
+    :param Ne: list of exc neurons in population (if intermixed as per the connectivity matrix)
+    :param Ni: list of inh neurons in population (if intermixed as per the connectivity matrix)
+
+    """
 
     start_scope()
 
@@ -171,7 +188,13 @@ def build_network(Ntotal, record_id, runtime, w_matrix = None, inh_conn=0.2, inp
 
     # start_scope()
 
-    if w_matrix is None:
+    if weight_matrix is not None:
+        pass
+
+    elif conn_matrix is not None:
+        W = conn_matrix
+        Nn = Ntotal  # number of neurons in the recurrent layer
+    else:
         # creating custom synaptic connectivity matrix for recurrent layer -- not quite a full synaptic weights matrix
         Nn = Ntotal  # number of neurons in the recurrent layer
         W = np.zeros([Nn, Nn])  # matrix of recurrent connection weights, should be a Nn x Nn size array
@@ -193,10 +216,6 @@ def build_network(Ntotal, record_id, runtime, w_matrix = None, inh_conn=0.2, inp
             idx = random.sample(range(len(W[i])), int(
                 i_p * len(W[i])))  # select random indexes to setup as connections based on selected probability
             W[i, idx] = 1
-    else:
-        W = w_matrix
-        Nn = Ntotal  # number of neurons in the recurrent layer
-
 
 
 
@@ -280,6 +299,160 @@ def build_network(Ntotal, record_id, runtime, w_matrix = None, inh_conn=0.2, inp
     return net, W, trace, s_mon, trace_ge, s_mon_p, Ce, Ci, Ne, Ni, G, trace_z, trace_gi, trace_gi_diff
 
 
+def build_network_with_weight_matrix(Ntotal, record_id, runtime, weight_matrix=None, inh_conn=0.2, input_rate=1,
+                  stim_external: bool = False, neurons_to_stim: arange = arange(0, 10),
+                  Ne: list = None, Ni: list = None):
+    """
+    Main function for building the Brian network with a fully custom weight matrix. Note: only currently implemented for custom weight matrix for E --> E and E --> I connections.
+
+    :param Ntotal: total number of neurons
+    :param record_id: neurons (indexes) to record
+    :param runtime: total time to run simulation
+    :param weight_matrix: synaptic weight matrix. Must be setup with source on the bottom axis and targets on the left axis. And sources must be all Exc neurons. Targets must be arranged as :Ne for Exc neurons and, Ne: for Inh neurons.
+    :param inh_conn: probability of inhibitory connectivity
+    :param input_rate: firing rate of external Poisson population
+    :param stim_external: boolean; True or False; timed array external stimulation
+    :param neurons_to_stim: neurons (range of indexes) to stimulate
+    :param Ne: list of exc neurons in population (if intermixed as per the connectivity matrix)
+    :param Ni: list of inh neurons in population (if intermixed as per the connectivity matrix)
+
+    """
+
+    start_scope()
+
+    #####
+
+    # setup for network:
+    # Parameters
+    Cm = 0.25 * nfarad
+    gL = 16.7 * nsiemens
+
+    # Ntotal = 5000  # total number of neurons (80/20 split for E and I neurons defined below in the network build function)
+    Nx = int(0.8 * Ntotal)  # number of X (external population) neurons
+
+    tau = 15 * ms
+    Vl = -75 * mV  # resting potential
+    V_t = -50 * mV  # threshold
+    V_refrac = -60 * mV  # refractory voltage
+
+    # Time constants
+    tau_d = 5 * ms  # synaptic decay timeconstant
+    tau_g = 25 * ms  # timescale of the inh. exhaust mechanism need to find better justification for the proper timescale of this for the actual simulation
+
+    # Reversal potentials
+    Ee = 0 * mV
+    V_rev_X = 0 * mV
+    Ei = -80 * mV
+    w_e = 2.4 * nsiemens  # excitatory synaptic weight
+    w_i = 40 * nsiemens  # inhibitory synaptic weight
+    w_x = 5.4 * nsiemens  # external input synaptic weight
+
+    gi_t = 16000 * nsiemens  # threshold value after which synaptic inh. strength starts to decrease - raise to like 10000 to inactivate
+    factor = 1 * nsiemens  # factor needed for the model eqs for the exhaust inh part
+
+    # runtime = 5 * second
+    dt = 0.1 * ms
+
+    # # EXTERNAL STIMULUS (I KNOW THAT THE ORDER OF THIS IS REALLY WEIRD BUT THIS SECTION AND THE MODEL EQS CANNOT BE ADDED TO THE NETWORK BUILD FUNCTION DEFINITION SINCE IT KICKS UP ERRORS IN BRIAN
+    # define external stimulus as a TimedArray of time dependent values
+    stim_onset = 1.000 * second
+    stim_off = 1.999 * second
+    stim = np.empty([int(runtime / dt), Ntotal])
+    # stimulus = TimedArray(stim * amp, dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
+    if stim_external:
+        print('!STIMULATION ACTIVE!')
+        print('|- Neurons specified for stim: ', neurons_to_stim[0], ' to ', neurons_to_stim[-1])
+        print('|- stim length: ', stim_off - stim_onset)
+        stim[int(stim_onset / dt):int(stim_off / dt), neurons_to_stim] = 5
+    stimulus = TimedArray(stim * amp,
+                          dt=0.1 * ms)  # constant current input into the specified  cells at the specified onset and offset times
+
+    # The model
+    eqs = Equations('''
+    dV/dt = 1/Cm * (stimulus(t,i) + gL*(Vl - V) + ge*(Ee-V) + z * gi*(Ei-V)) : volt (unless refractory)
+    dge/dt = -ge/tau_d : siemens
+    dgi/dt = -gi/tau_d : siemens
+
+    # z factor used to capture changes in Inh. synaptic effectiveness
+    dz/dt = 1/tau_g * (z_inf - z) : 1
+    z_inf = 1/(1 + exp(-2*1.0*gi_diff)) : 1
+    gi_diff = (gi_t - gi)/factor : 1  # note that this is not addition because gi has +ve weight
+    ''')
+
+    #####
+
+    # start_scope()
+
+    Pe = NeuronGroup(Ne, eqs, threshold='v>Vt', reset='v = Vr', refractory=5 * ms,
+                     method='exact')
+    Pi = NeuronGroup(Ni, eqs, threshold='v>Vt', reset='v = Vr', refractory=5 * ms,
+                     method='exact')
+
+    ##### make synaptic connections and specify the synaptic model
+    # using custom synaptic connectivity matrix from above
+    W = weight_matrix  # custom connectivity matrix
+
+    Cee = Synapses(Pe, Pe, 'w_e: volt', on_pre='ge += w_e')
+    Cee.connect()
+    Cee.w_e[:] = W[:, :Ne].flatten() * nsiemens
+
+    Cei = Synapses(Pe, Pi, 'w_e: volt', on_pre='ge += w_e')
+    Cei.connect()
+    Cei.w_e[:] = W[:, Ne:].flatten() * nsiemens
+
+    Cie = Synapses(Pi, Pe, on_pre='gi += w_i')
+    Cie.connect('i>=Ni', p=0.5)
+    Cii = Synapses(Pi, Pi, on_pre='gi += w_i')
+    Cii.connect('i>=Ni', p=0.5)
+
+
+    # adding a synaptic delay to the pre-synaptic pathways
+    Cei.delay = '1*ms + randn()/2 * ms'
+    Cee.delay = '1*ms + randn()/2 * ms'
+    Cie.delay = '0.5*ms + randn()/2 * ms'
+    Cii.delay = '0.5*ms + randn()/2 * ms'
+    #
+
+    # BACKGROUND Poisson input
+    G = PoissonGroup(Nx, rates=input_rate * Hz, dt=0.1 * ms)
+    CXe = Synapses(G, Pe, on_pre='ge+=w_x')
+    CXi = Synapses(G, Pi, on_pre='ge+=w_x')
+    CXe.connect(p=0.2)  # Excitatory external drive connectivity
+    CXi.connect(p=0.2)  # Excitatory external drive connectivity
+
+    # Initialization
+    Pe.V = 'Vl + rand() * (V_t - Vl)'  # add some randomness to the initial membrane potential
+    Pe.ge = 0
+    Pe.gi = 0
+    Pe.z = 1.
+
+    Pi.V = 'Vl + rand() * (V_t - Vl)'  # add some randomness to the initial membrane potential
+    Pi.ge = 0
+    Pi.gi = 0
+    Pi.z = 1.
+
+
+    # Setup a few monitors
+    trace = StateMonitor(Pe, 'v', record=[1, 10, 400, 600])
+    s_mon_e = SpikeMonitor(Pe)
+
+    # trace = StateMonitor(G, 'V', record=record_id)
+    # trace_ge = StateMonitor(G, 'ge', record=record_id)
+    # trace_gi = StateMonitor(G, 'gi', record=record_id)
+    # s_mon = SpikeMonitor(G)
+    # s_mon_p = SpikeMonitor(P)
+
+    # these are for tracking the Inh. exhaust stuff
+    trace_z = StateMonitor(Pe, 'z', record=record_id)
+    trace_gi = StateMonitor(Pe, 'gi', record=record_id)
+    trace_gi_diff = StateMonitor(Pe, 'gi_diff', record=record_id)
+
+    net = Network(collect())
+
+    ######
+    net.run(runtime, report='text')
+
+    return net, W, trace, s_mon_e, Ne, Ni, G, trace_z, trace_gi, trace_gi_diff
 
 # def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, trace_gi, trace_ge, neuron, xlimits=False):
 #     "bunch of plots for looking at the Inh. exhaust mech"

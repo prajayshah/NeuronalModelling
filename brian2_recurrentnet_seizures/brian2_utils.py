@@ -11,7 +11,7 @@ from scipy import stats
 # not sure that this actually works with very sparsely firing networks where some neurons have no firing
 def make_spike_array(spike_monitor_trains:np.array, ntotal, rectime, rec_offset=0, dt=0.0001, binsize = 0.010):
     """
-    make a spike array from an array of neurons x spike_times
+    make a binned spike array from an array of neurons x spike_times
     Parameters
     ----------
     spike_monitor_trains: an array or list of neurons x spike_times
@@ -172,7 +172,7 @@ def plot_voltage(voltage_monitor, spike_monitor, alpha, ylimits, xlimits, neuron
     plt.show()
 
 
-def plot_firing_rate(spike_raster_binned, rec_start, rec_stop, binsize_sec=0.01, title: str = 'Neuronal Population Firing rate'):
+def plot_firing_rate(spike_raster_binned, binsize_sec=0.01, title= 'Neuronal Population Firing rate'):
     """calculate and plot firing rate across 10ms timebins"""
 
     firing_rate_binned = np.sum(spike_raster_binned, axis=0)
@@ -181,7 +181,6 @@ def plot_firing_rate(spike_raster_binned, rec_start, rec_stop, binsize_sec=0.01,
     plt.plot(firing_rate_binned_norm, c='black', linewidth=1)
     plt.xlabel('Time (ms)')
     plt.ylabel('Population Firing rate (Hz)')
-    plt.xlim(rec_start, rec_stop)
     # title = 'avg firing rate %s' % (np.sum(firing_rate_binned_norm[params['rec_start']/1000/binsize_sec:params['rec_stop']/1000/binsize_sec])/len(firing_rate_binned_norm[params['rec_start']/1000/binsize_sec:params['rec_stop']/1000/binsize_sec]))
     plt.suptitle(title + ', binsize = %s ms' % (binsize_sec * 1000))
     plt.show()
