@@ -3,11 +3,15 @@ import matplotlib.pyplot as plt
 import scipy.integrate
 from functools import partial
 import pickle
+from sklearn.decomposition import PCA
+import pandas as pd
+from scipy import stats
+
 
 ### Functions for building CONNECTIVITY MATRIX
 
-def GetBulk (N):
-    chi = np.random.normal( 0, np.sqrt(1./(N)), (N,N) )
+def GetBulk (N, center=0):
+    chi = np.random.normal( center, np.sqrt(1./(N)), (N,N) )
     return chi
 
 def GetGaussianVector (mean, std, N):
@@ -27,17 +31,54 @@ def SimulateActivity (t, x0, J, I):
     # print(' ** Simulating... **')
     return scipy.integrate.odeint( partial(Integrate, J=J, I=I), x0, t )
 
+
+# analysis
+# PCA on dataset
+def pca_network_response(network_activity):
+    pca = PCA(n_components=min(network_activity.shape))
+    pca.fit(network_activity)
+    pca_result = pd.DataFrame(pca.transform(network_activity))  # , columns=['PCA%i' % i for i in range(275)])
+    sv = pca.singular_values_
+    su = (sv / sum(sv))
+    return pca.explained_variance_ratio_
+
+
+# fit and plot variance per PC
+def powerlawfit(data: np.array, subset: list = [0, -5]):
+    x = range(len(data))[subset[0]:subset[1]]
+    y = data[subset[0]:subset[1]]
+
+
+    # to perform powerlaw fit, first take data into log-log space and then do linear regression in that space
+    res = stats.linregress(np.log2(x), np.log2(y))
+    print(res)
+
+    x_fit = range(len(data))[int(0.2*len(data)): -int(0.2*len(data))]
+    y_fit = res.intercept + res.slope * np.log2(x_fit)
+
+    fig, ax = plt.subplots(figsize=[6,6])
+    ax.plot(np.log2(range(len(data))), np.log2(data), label='original data', color='darkblue')
+    ax.plot(np.log2(x_fit), y_fit, c = 'darkgreen', label='fitted line')
+    ax.set_xlabel('PC Dimension')
+    ax.set_ylabel('Variance (|eigenvalue|)')
+    plt.show()
+
+    return res.slope
+
+
 # plotting
 def pop_firing_rate(F, plot=True):
     F_avg = np.mean(F, axis=1)
     F_avg_total = np.mean(F_avg)
 
     if plot:
-        f, ax = plt.subplots(figsize = [4,2])
-        ax.axhline(y=F_avg_total, color='gray', alpha=0.2)
-        ax.plot(F_avg)
-        ax.set_xlabel('Time (norm.)')
-        ax.set_ylabel('Avg. Pop firing rate')
+        f, ax = plt.subplots(nrows=2, ncols=1, figsize = [4,4])
+        for i in np.random.randint(0, F.shape[1], 5): ax[0].plot(F[:, i], alpha=0.5)
+        ax[0].set_ylabel('firing rate')
+        ax[1].axhline(y=F_avg_total, color='gray', alpha=0.2)
+        ax[1].plot(F_avg)
+        ax[1].set_xlabel('Time (norm.)')
+        ax[1].set_ylabel('Avg. Pop firing rate')
         f.tight_layout(pad=1.3)
         f.show()
 
@@ -107,7 +148,7 @@ def plot_heatmap(data, xlabel: str, ylabel: str, colorlabel: str, xlabels: list 
     if 'fig' in kwargs.keys():
         return fig, ax
 
-
-def load_(pkl_path: str):
-    f = pickle.load(open(pkl_path, 'rb'))
-    return f
+#
+# def load_(pkl_path: str):
+#     f = pickle.load(open(pkl_path, 'rb'))
+#     return f
