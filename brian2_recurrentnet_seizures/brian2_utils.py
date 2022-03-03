@@ -1,6 +1,11 @@
-import sys; sys.path.append('/home/pshah/Documents/code/utils_praj')
+import sys;
 
-from funcs_pj import generate_new_color
+import numpy as np
+from matplotlib import pyplot as plt
+
+sys.path.append('/home/pshah/Documents/code/utils_praj')
+
+from funcsforprajay.funcs import _generate_new_color, plot_hist_density, dataplot_frame_options
 from brian2 import *
 from sklearn.decomposition import PCA
 import pandas as pd
@@ -9,13 +14,16 @@ from scipy import stats
 
 ######## UTILITIES FOR ANLAYSIS OF DATA ################################################################################
 # not sure that this actually works with very sparsely firing networks where some neurons have no firing
-def make_spike_array(spike_monitor_trains:np.array, ntotal, rectime, rec_offset=0, dt=0.0001, binsize = 0.010):
+def make_spike_array(spike_monitor_trains: np.array, ntotal, rectime, rec_offset=0, dt=0.0001, binsize = 0.010):
     """
-    make a binned spike array from an array of neurons x spike_times
+    make a binned spike array from an array of neurons x spike_times.
+
+    TODO consider doing a sliding window for spike counting. Huang et al., do 200ms sliding window at 1ms timesteps.
+
     Parameters
     ----------
     spike_monitor_trains: an array or list of neurons x spike_times
-    ntotal: # of total neurons (should be same as
+    ntotal: # of total neurons (should be same as len of spike_monitor_trains)
     rectime: total recording time of simulation (seconds)
     rec_offset: how to offset the spike locations (if they are relative to the total simulation time and NOT the total recording time)
     dt: time resolution of simulation (seconds)
@@ -52,7 +60,7 @@ def make_spike_array(spike_monitor_trains:np.array, ntotal, rectime, rec_offset=
     return spike_array, spike_raster_binned, spike_counts_binned
 
 # calculate correlation coefficients
-def corr_coef(spike_raster_binned, binsize, plot: bool = True):
+def corr_coef(spike_raster_binned, binsize, **kwargs):
     corr_mtx = np.corrcoef(spike_raster_binned)
     x = corr_mtx[np.triu_indices(corr_mtx.shape[0], k=1)]
     # not sure why but there are nan values coming up in the corr_values calculation
@@ -62,14 +70,40 @@ def corr_coef(spike_raster_binned, binsize, plot: bool = True):
     avg_corr = np.mean(corr_values)
     print('Avg. corr coef value: ', avg_corr)
 
-    plt.hist(corr_values, bins=100, color='gray')
-    plt.axvline(x=avg_corr, color='black')
-    plt.xlabel('correlation coefficient')
-    plt.ylabel('density')
-    plt.suptitle('avg corr coef distribution, binsize = %s ms' % (binsize * 1000))
-    plt.show()
+    dataplot_frame_options()
+    if not 'ax' in [*kwargs]:
+        fig, ax = plt.subplots(figsize=[3, 3])
+    else:
+        ax = kwargs['ax']
+        fig = kwargs['fig']
+
+    ax.hist(corr_values, bins=100, color='gray')
+    ax.axvline(x=avg_corr, color='black')
+    ax.set_xlabel('correlation coefficient')
+    ax.set_ylabel('density')
+    ax.set_title(f'avg corr coef distribution, binsize = {(binsize * 1000)} ms, avg = {round(avg_corr,6)}', wrap=True)
+    fig.show() if not 'fig' in [*kwargs] else None
 
     return avg_corr
+
+
+def plot_firing_rate_histogram(spike_array, rec_len_sec, **kwargs):
+    firing_rates = []
+    for neuron in spike_array:
+        n_spikes = sum(neuron)
+        firing_rates.append(n_spikes / rec_len_sec)
+
+    dataplot_frame_options()
+    if not 'ax' in [*kwargs]:
+        fig, ax = plt.subplots(figsize=[3, 3])
+    else:
+        fig = kwargs['fig']
+        ax = kwargs['ax']
+
+
+    # make histogram
+    plot_hist_density(data=[firing_rates], fill_color=['limegreen'], alpha=0.0, num_bins=20, best_fit_line='powerlaw',
+                      colors=['cornflowerblue'], x_label='firing rate (Hz)', fig=fig, ax=ax, show=False, mean_line=True)
 
 
 # PCA on dataset
@@ -152,7 +186,7 @@ def plot_voltage(voltage_monitor, spike_monitor, alpha, ylimits, xlimits, neuron
     # make random color choices
     colors = []
     for i in range(len(neuron_id)):
-        colors.append(generate_new_color(colors, pastel_factor=0.2))
+        colors.append(_generate_new_color(colors, pastel_factor=0.2))
 
     # make plot
     plt.figure(figsize=[20, 3])
@@ -172,18 +206,23 @@ def plot_voltage(voltage_monitor, spike_monitor, alpha, ylimits, xlimits, neuron
     plt.show()
 
 
-def plot_firing_rate(spike_raster_binned, binsize_sec=0.01, title= 'Neuronal Population Firing rate'):
+def plot_firing_rate(spike_raster_binned, binsize_sec=0.01, title= 'Neuronal Population Firing rate', **kwargs):
     """calculate and plot firing rate across 10ms timebins"""
 
     firing_rate_binned = np.sum(spike_raster_binned, axis=0)
     firing_rate_binned_norm = firing_rate_binned / binsize_sec / spike_raster_binned.shape[0]
-    plt.figure(figsize=[20, 3])
-    plt.plot(firing_rate_binned_norm, c='black', linewidth=1)
-    plt.xlabel('Time (ms)')
-    plt.ylabel('Population Firing rate (Hz)')
+
+    dataplot_frame_options()
+    if not 'ax' in [*kwargs]:
+        fig, ax = plt.subplots(figsize=[20, 3])
+    else:
+        ax = kwargs['ax']
+    ax.plot(firing_rate_binned_norm, c='black', linewidth=1)
+    ax.set_xlabel('Time (ms)')
+    ax.set_ylabel('Population Firing rate (Hz)')
     # title = 'avg firing rate %s' % (np.sum(firing_rate_binned_norm[params['rec_start']/1000/binsize_sec:params['rec_stop']/1000/binsize_sec])/len(firing_rate_binned_norm[params['rec_start']/1000/binsize_sec:params['rec_stop']/1000/binsize_sec]))
-    plt.suptitle(title + ', binsize = %s ms' % (binsize_sec * 1000))
-    plt.show()
+    ax.set_title(title + ', binsize = %s ms' % (binsize_sec * 1000))
+    fig.show() if not 'ax' in [*kwargs] else None
 
 
 def make_plots_inh_exhaust_mech(s_mon, s_mon_p, trace, trace_z, trace_gi_diff, trace_gi, trace_ge, neuron,
@@ -296,19 +335,24 @@ def plot_i_inputs(i_monitor, neurons_to_plot, alpha):
     plt.show()
 
 
-def plot_connectivity_matrix(conn_matrix, cmap='Purples', color_lim=[0.05, 0.1], colorbar=False):
+def plot_connectivity_matrix(conn_matrix, cmap='Purples', color_lim=[0.05, 0.1], colorbar=False, **kwargs):
     """plot heatmap of synaptic connectivity matrix given as numpy array where 1 denotes connection between i and j index"""
     # plt.figure(figsize=[10, 10])
-    fig, ax = plt.subplots(figsize=(10, 10))
+
+    if not 'ax' in [*kwargs]:
+        fig, ax = plt.subplots(figsize=[5, 5])
+    else:
+        ax = kwargs['ax']
+        fig = kwargs['fig']
 
     hmap = ax.imshow(conn_matrix, cmap=cmap, vmin=color_lim[0], vmax=color_lim[1])
 #     plt.clim(color_lim[0], color_lim[1])
 #     if title is not None:
 #         ax.set_title(title)
-    ax.set_title('Binary synaptic connectivity matrix (source neurons on left axis, target neurons on bottom axis)')
+    ax.set_title('Binary synaptic connectivity matrix (source neurons on left axis, target neurons on bottom axis)', wrap=True)
     if colorbar:
         color_bar = fig.colorbar(hmap, ax=ax)
         color_bar.minorticks_on()
     ax.set_xlabel('Neurons (source)')
     ax.set_ylabel('Neurons (target)')
-    fig.show()
+    fig.show() if 'fig' not in [*kwargs] else None

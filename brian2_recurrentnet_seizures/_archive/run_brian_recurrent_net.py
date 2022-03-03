@@ -11,31 +11,42 @@ else:
 
 # import statements
 from brian2 import *
-from funcs_pj import generate_new_color
-import matplotlib.pyplot as plt
-import numpy as np
 from brian2_recurrentnet_seizures.brian2_utils import *
 from brian2_recurrentnet_seizures.brian_recurrent_net_main import *
 
 import pickle
 import pandas as pd
+import numpy as np
+import random
+
+
+
+
+
+
+
+
 
 
 #%% BUILD AND RUN NETWORK
+spike_raster_binned_multi = None
+
 runtime = 3*second
 dt = 0.1*ms
 inh_conn = 0.2
 Ntotal = 5000
+Ne = Ntotal * 0.8
+Ni = Ntotal * 0.2
 input_rate = 2.5
 
 # build network
 record_id=[100, 4000, 4300, 4400, 2300, 3049, 494, 209, 250, 1505]
 net, W, trace, s_mon, trace_ge, s_mon_p, Ce, Ci, Ge, Gi, G, trace_z, trace_gi, trace_gi_diff = \
-    build_network(Ntotal=Ntotal, record_id=record_id, runtime = runtime, inh_conn=inh_conn, input_rate=input_rate,
-                  stim_external = True, neurons_to_stim = arange(208, 214))
+    b2_network(Ntotal=Ntotal, record_id=record_id, runtime = runtime, inh_conn=inh_conn, input_rate=input_rate,
+               stim_external = False, neurons_to_stim = arange(208, 214))
 
 # run simulation
-# net.run(runtime, report='text')
+net.run(runtime, report='text')
 
 # quick spike raster plot to initialize plotting
 figure(figsize=[20,3])
@@ -61,9 +72,32 @@ pickle.dump(trace.V, open("%sNeuronalModelling/sim-exports/trace_V.pkl" % locati
 # convert trace array into pandas DataFrame
 trace_df = pd.DataFrame(trace.V.T, columns=record_id)
 
+# make spike raster bins
+spike_monitor_trains = [(array / dt).astype(int64) for array in list(s_mon.spike_trains().values())]
+
+spike_monitor_trains_e = [spike_monitor_trains[i] for i in range(len(spike_monitor_trains)) if i in range(Ne)]
 
 # create numpy array of spikes:
-spike_array, spike_counts_binned, spike_raster_binned = make_spike_array(spike_monitor=s_mon, ntotal=Ntotal, runtime=runtime, dt=dt)
+binsize = 100  # ms
+spike_array, spike_counts_binned, spike_raster_binned = make_spike_array(spike_monitor_trains=spike_monitor_trains_e,
+                                                                         ntotal=len(Ne), dt=dt, binsize=binsize,
+                                                                         rectime=runtime)
+plot_firing_rate(spike_raster_binned, binsize_sec=0.01, title='Population Firing rate')
+
+## plot histogram of firing rates for all neurons in network
+# plot_firing_rate_histogram(spike_array = spike_array, len_sec = runtime / second)
+
+if spike_raster_binned_multi is None:
+    spike_raster_binned_multi = spike_raster_binned
+    print(spike_raster_binned_multi.shape)
+else:
+    spike_raster_binned_multi = np.dstack((spike_raster_binned_multi, spike_raster_binned))
+    print(spike_raster_binned_multi.shape)
+
+avg_corr = corr_coef(spike_raster_binned, binsize=binsize)
+
+# create numpy array of spikes:
+spike_array, spike_counts_binned, spike_raster_binned = make_spike_array(spike_monitor_trains=spike_counts, ntotal=Ntotal, rectime=runtime, rec_offset=0, dt=0.0001, binsize = 0.010)
 
 # collect 10ms spike bins  (with spike counts per bin as well)
 spike_counts_binned = np.empty([Ntotal, int(runtime/dt/10)])
@@ -76,7 +110,7 @@ for set in range(int(runtime/dt/10)):
 
 
 #%% calculate correlation coefficients
-corr_mtx = np.corrcoef(spike_raster_binned[Ni:,:])
+corr_mtx = np.corrcoef(spike_raster_binned[:int(Ntotal*0.8),:])
 x = corr_mtx[np.triu_indices(corr_mtx.shape[0], k=1)]
 # not sure why but there are nan values coming up in the corr_values calculation
 # remove nans from corr_values

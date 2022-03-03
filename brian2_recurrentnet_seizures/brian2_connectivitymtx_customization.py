@@ -9,7 +9,7 @@ from brian2_recurrentnet_seizures.brian2_utils import *
 Nn = 4000  # number of neurons in the recurrent layer
 W = np.zeros([Nn, Nn])  # matrix of recurrent connection weights, should be a Nn x Nn size array
 # W = np.diag(np.ones(Nn)) # -- self connections
-
+ 
 def resetw(W=W):
     W = np.zeros([W.shape[0], W.shape[1]])
     return W
@@ -140,18 +140,3 @@ plt.show()
 spike_counts = s_mon.count
 spike_counts_Hz = array(spike_counts/runtime)
 avg=mean(spike_counts_Hz); print('average spiking rate of population: ', np.round(avg, 2), 'Hz')
-
-
-# %% 2.1) low rank connectivity - outer product of two vectors
-
-def setrandomvector(min, max, N):
-    return (max - min) * np.random.random(N) + min
-
-N = 2000
-
-v1 = setrandomvector(0.5, 1.5, N)
-v2 = setrandomvector(0.5, 1.5, N)
-
-mtx = np.outer(v1, v2)  # structured connectivity matrix
-
-plot_connectivity_matrix(conn_matrix=mtx.T, color_lim=[0.5, 1.5], colorbar=True)
